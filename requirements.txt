@@ -1,4 +1,0 @@
-pytest
-# --client gemini 는 추가 설치 불필요 (표준 라이브러리만 사용)
-openai>=1.0      # --client openai / gemini-openai 를 쓸 때만
-anthropic>=2.0   # --client anthropic 을 쓸 때만
