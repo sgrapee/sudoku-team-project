@@ -395,7 +395,7 @@ def test_examples_are_valid_and_match_solution(path):
 
 
 def test_examples_exist():
-    assert len(EXAMPLES) == 5
+    assert len(EXAMPLES) >= 5
 
 
 # ============================================================ 실제 API (기본 skip)
@@ -419,7 +419,7 @@ PUZZLES = B.load_puzzles("all")
 
 
 def test_baseline_puzzles_loaded():
-    assert len(PUZZLES) == 15
+    assert len(PUZZLES) == len(EXAMPLES) + 10  # examples/ 전부 + 일반 스도쿠 easy·hard 5개씩
     assert all(len(p["solution"]) == 81 for p in PUZZLES)
 
 
