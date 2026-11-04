@@ -49,14 +49,18 @@ VARIANTS: dict[str, list[str]] = {
     "thermo": ["thermo"],
     "arrow": ["arrow"],
     "mixed": ["diagonal", "thermo", "arrow"],
+    "killer": ["killer"],
 }
-DEFAULT_GIVENS = {"classic": 24, "diagonal": 22, "thermo": 20, "arrow": 20, "mixed": 16}
+DEFAULT_GIVENS = {"classic": 24, "diagonal": 22, "thermo": 20, "arrow": 20, "mixed": 16, "killer": 18}
 
 N_THERMOS = 4
 N_ARROWS = 4
+N_CAGES = 8
+CAGE_SIZE = (2, 4)
 PROBE_TIME_LIMIT = 10.0  # 칸 하나 지울 때 유일해 검사 제한 시간(초)
 
 NEIGHBORS8 = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+NEIGHBORS4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
 
 def tier_level(rating: dict) -> int:
@@ -86,9 +90,9 @@ def tiers_for(variant: str) -> tuple[str, ...]:
 
 
 # ------------------------------------------------------------ 제약 역산 (A2)
-def _adjacent(cell: Cell, grid: Grid) -> list[Cell]:
+def _adjacent(cell: Cell, grid: Grid, dirs: list[tuple[int, int]] = NEIGHBORS8) -> list[Cell]:
     r, c = cell
-    return [(r + dr, c + dc) for dr, dc in NEIGHBORS8
+    return [(r + dr, c + dc) for dr, dc in dirs
             if 0 <= r + dr < grid.size and 0 <= c + dc < grid.size]
 
 
@@ -155,6 +159,33 @@ def _find_arrow_path(circle: Cell, solution: dict[Cell, int], grid: Grid,
     return dfs([], 0)
 
 
+def derive_cages(solution: dict[Cell, int], grid: Grid, rnd: random.Random,
+                 used: set[Cell], n: int = N_CAGES) -> list[dict]:
+    """정답에서 값이 서로 다른 상하좌우 연결 칸 묶음(2~4칸)을 골라 킬러 케이지로 만든다."""
+    out = []
+    starts = list(grid.cells)
+    rnd.shuffle(starts)
+    for start in starts:
+        if len(out) >= n:
+            break
+        if start in used:
+            continue
+        want = rnd.randint(*CAGE_SIZE)
+        cage = [start]
+        while len(cage) < want:
+            vals = {solution[c] for c in cage}
+            nxt = sorted({nb for c in cage for nb in _adjacent(c, grid, NEIGHBORS4)
+                          if nb not in used and nb not in cage and solution[nb] not in vals})
+            if not nxt:
+                break
+            cage.append(rnd.choice(nxt))
+        if len(cage) >= 2:
+            used.update(cage)
+            out.append({"type": "killer", "cells": [list(c) for c in cage],
+                        "sum": sum(solution[c] for c in cage)})
+    return out
+
+
 # ------------------------------------------------------------------ 생성
 def complete_grid(grid: Grid, base_constraints: list[dict], seed: int) -> dict[Cell, int]:
     """base 제약(대각선 등)을 만족하는 무작위 완성판. 클래식이면 benchmark.random_complete_grid와 같다."""
@@ -219,6 +250,8 @@ def generate(variant: str, seed: int, target_givens: int | None = None,
         derived += derive_thermos(solution, grid, rnd, used)
     if "arrow" in parts:
         derived += derive_arrows(solution, grid, rnd, used)
+    if "killer" in parts:
+        derived += derive_cages(solution, grid, rnd, used)
 
     spec = {"givens": "", "constraints": base + derived}
     givens = dig(spec, solution, grid, target, seed, symmetric)
