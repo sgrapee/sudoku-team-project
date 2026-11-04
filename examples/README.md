@@ -49,6 +49,6 @@ from llm_parser.canonical import canonical_items
 ## 주의
 
 - **9칸 미만 `alldiff`는 넣지 않았다.** 현재 엔진은 ac3/full 전파에서 이런 제약이 있으면 해가 있어도
-  "해 없음"을 낸다(② 결함 A, `parser/for_engine_team/README.md`).
+  "해 없음"을 낸다(② 결함 A, `parser/engine_fixes/README.md`).
 - 킬러 예시는 현재 엔진에서 약 0.5초 걸린다(합 전파 미호출, 결함 B). 패치 적용 시 약 0.01초.
 - 퍼즐 생성기는 ④ 담당이라 생성 스크립트는 포함하지 않았다. 형식만 맞추면 ④가 만든 퍼즐도 여기에 추가할 수 있다.

@@ -200,7 +200,7 @@ noisy에서 틀린 2문장은 모두 검증을 통과해 버린 조용한 오류
 | 3-3 실제 LLM 평가 준비 | ✅ `--repeat`, 모델명·실행 시각·반복 번호·지연·원문·오류 저장, 키 없으면 실제 API 테스트 skip |
 | 4-3 저장소 정리 | ✅ 배포 zip에서 캐시 제거, `parser/.gitignore`에 `results/` |
 | 공통 요청 | ✅ 저장소 루트 `examples/`에 명세 5개 (`examples/README.md`) |
-| 1-x 엔진 수정 | ⛔ ② 담당. `for_engine_team/`에 보고만 갱신 |
+| 1-x 엔진 수정 | ⛔ ② 담당. `engine_fixes/`에 보고와 패치만 보관 |
 | 2-1 Structured Outputs, 2-2 needs_clarification | ⏸ 이번 범위에서 제외 (정보 부족은 `unsupported`의 "정보 부족:"으로 기록) |
 | 4-1 루트 README, 4-2 패키징, 4-4 CI | ⏸ ① 결정 사항이라 제외 |
 

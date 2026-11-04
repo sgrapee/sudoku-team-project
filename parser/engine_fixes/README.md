@@ -1,7 +1,7 @@
 # ② 엔진 결함 보고 (③ 파서 연동 중 발견)
 
-적용: 저장소 루트에서 `patch -p0 < parser/for_engine_team/engine_fixes.patch`
-(또는 `git apply parser/for_engine_team/engine_fixes.patch`)
+적용: 저장소 루트에서 `patch -p0 < parser/engine_fixes/engine_fixes.patch`
+(또는 `git apply parser/engine_fixes/engine_fixes.patch`)
 
 적용 후 `engine/` 테스트 **84개 통과**(기존 77 + 회귀 7). demo.py 출력과 일반 스도쿠 벤치마크는 변화 없음.
 

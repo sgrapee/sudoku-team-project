@@ -3,6 +3,18 @@
 자연어로 설명한 변형 스도쿠 규칙을 LLM이 JSON 제약 명세로 변환하고,
 직접 구현한 제약 충족 문제(CSP) 엔진이 퍼즐을 검증하고 풀이하는 프로젝트입니다.
 
+## 무엇을 보면 되나요?
+
+| 목적 | 위치 |
+|---|---|
+| 스도쿠 풀이 알고리즘 확인 | `engine/sudoku_engine/` |
+| 자연어를 JSON으로 바꾸는 AI 코드 확인 | `parser/llm_parser/` |
+| 바로 실행해 보기 | `engine/demo.py` |
+| 변형 스도쿠 예제 확인 | `examples/` |
+| 엔진 테스트 | `engine/tests/` |
+| AI 파서 테스트 | `parser/tests/` |
+| AI 평가 문장과 결과 확인 | `parser/data/`, `parser/results/` |
+
 ## 폴더 구조
 
 ```text
@@ -17,7 +29,7 @@ sudoku-team-project/
 │  ├─ data/                # 개발·평가 문장 데이터
 │  ├─ tests/               # 파서 테스트
 │  ├─ results/             # LLM 평가 결과
-│  ├─ for_engine_team/     # 엔진 연동 참고 자료
+│  ├─ engine_fixes/        # 발견된 엔진 문제와 수정 패치
 │  ├─ requirements.txt
 │  └─ README.md            # 파서 상세 설명
 ├─ examples/               # 공용 변형 스도쿠 JSON 예제
