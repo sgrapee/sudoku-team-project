@@ -41,9 +41,11 @@ class Model:
             for a, b in con.binary_arcs():
                 self.neighbors[a].add(b)
 
-        # 전역(비이진) 제약만 따로 — 매 전파 때 propagate()를 호출해야 하는 것들
+        # 전역 제약 — 매 전파 때 propagate()를 호출해야 하는 것들.
+        # AllDifferent는 이진 아크로 완전히 표현되므로 빠지지만, 킬러처럼 아크(!=)와
+        # 합 조건을 함께 가진 제약은 아크만으로 부족하므로 여기에 넣는다.
         self.global_constraints: list[Constraint] = [
-            con for con in self.constraints if not con.binary_arcs()
+            con for con in self.constraints if not isinstance(con, AllDifferent)
         ]
         self.global_of: dict[Cell, list[Constraint]] = defaultdict(list)
         for con in self.global_constraints:
