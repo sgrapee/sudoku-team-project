@@ -1,41 +1,54 @@
-# sudoku-team-project
+# examples — 공용 명세 JSON (③ 작성 · ④ 실험 · ⑤ UI)
 
-변형 스도쿠 + LLM 파서 프로젝트 요약
-1. 프로젝트 개요
-사용자가 자연어 또는 이미지로 입력한 변형 스도쿠 규칙을 LLM이 구조화된 제약조건으로 변환하고, 직접 구현한 solver가 퍼즐을 해결하는 시스템이다.
-자연어·이미지 입력 → LLM 규칙 해석 → 제약 명세 생성
-→ 제약 전파 및 DFS 탐색 → 해답·검증 결과 출력
-지원 규칙은 Killer, Thermo, Arrow, Sandwich, Diagonal Sudoku 등이다. LLM은 규칙 해석만 담당하고, 실제 풀이와 검증은 solver가 수행한다.
-2. PEAS
-구분   내용
-Performance   풀이 정확도, 규칙 해석 정확도, 제약 충족률, 처리 시간, 유일해 판정
-Environment   변형 스도쿠, 자연어 규칙, 퍼즐 이미지, 제약조건
-Actuator   제약 명세 생성, 해답·풀이 과정 출력, 오류 및 유일해 여부 보고
-Sensor   퍼즐 숫자, 자연어 설명, 이미지, LLM 파싱 및 제약 검사 결과
+`engine/sudoku_engine/spec.py` 형식의 변형 스도쿠 명세 5개. 모두 **현재 엔진(패치 전)에서 유일해**를 갖고,
+`fc` / `ac3` / `full` 전파 설정 모두에서 저장된 정답과 같은 해가 나오는 것을 확인했다.
 
+| 파일 | 변형 | 단서 | 제약 수 | 난이도(rate_difficulty) |
+|---|---|---|---|---|
+| `01_x_sudoku.json` | 대각선 | 24 | 1 | 매우 어려움 |
+| `02_killer.json` | 킬러 케이지 8개 | 26 | 8 | 논리 불가(추측 필요) |
+| `03_thermo_parity.json` | 온도계 3개 + 짝수·홀수 칸 | 24 | 5 | 보통 |
+| `04_arrow_inequality.json` | 화살표 3개 + 부등호 5개 | 25 | 8 | 논리 불가(추측 필요) |
+| `05_sandwich_mix.json` | 샌드위치 3개 + 킬러 2개 + 대각선 | 24 | 6 | 쉬움 |
 
-3. 환경 분류
-기준   분류
-관측 가능성   완전 관측
-에이전트 수   단일 에이전트
-결정성   결정론적
-시간 구조   일화적
-동적 변화   정적
-데이터 형태   이산적
-환경 지식   기지 환경
+## 파일 형식
 
+```json
+{
+  "name": "02_killer",
+  "title": "킬러 케이지",
+  "note": "한 줄 설명",
+  "rules_text": "자연어 규칙 (③ 파서 입력 / ⑤ 화면 표시용)",
+  "givens": "81자, 빈칸은 '.'",
+  "constraints": [ {"type": "killer", "cells": ["r2c9", "r3c9"], "sum": 17}, ... ],
+  "solution": "81자 정답 (④ 채점용)"
+}
+```
 
-각 퍼즐을 독립된 작업으로 보기 때문에 일화적으로 분류한다. 단, 하나의 퍼즐 내부 풀이 과정은 이전 숫자 배치가 다음 선택에 영향을 주므로 순차적인 성격도 가진다.
+- `load_spec()`은 `givens`·`constraints`만 읽고 나머지 키는 무시하므로 **파일을 그대로 넣으면 된다.**
+- 좌표는 1-indexed `"r행c열"`. 샌드위치 `index`만 0부터 센다(1행 → 0).
 
-4. 기본 알고리즘
-스도쿠를 제약 충족 문제(CSP)로 표현하고 DFS 기반 백트래킹을 사용한다.
-- 제약 전파: 불가능한 후보 제거
-- MRV: 후보가 가장 적은 셀부터 선택
-- LCV: 주변 후보를 가장 적게 제거하는 숫자부터 선택
-- 백트래킹: 모순 발생 시 이전 상태로 복귀
-- 유일해 검증: 첫 번째 해 이후 두 번째 해까지 탐색
-BFS와 A*는 많은 상태를 저장해야 하고, Minimax는 경쟁 상대가 필요하므로 적합하지 않다.
-5. 핵심 특징
-LLM은 자연어 규칙을 solver가 이해할 수 있는 형식으로 변환하고, 직접 구현한 solver는 제약 전파와 DFS 백트래킹을 이용해 퍼즐을 해결하고 검증한다.
+## 사용 예
 
-단, 코드 수정 없이 처리할 수 있는 규칙은 기존 제약 명세로 표현 가능한 규칙으로 제한된다.
+```python
+import json
+from sudoku_engine import solve
+from sudoku_engine.spec import load_spec
+
+ex = json.load(open("examples/02_killer.json", encoding="utf-8"))
+model = load_spec(ex)              # ④⑤: 바로 풀이·힌트에 사용
+result = solve(model)
+assert "".join(str(result.solution[(r, c)]) for r in range(9) for c in range(9)) == ex["solution"]
+
+# ③: 자연어 → 명세 파싱 결과를 정답 constraints와 비교
+from llm_parser import parse_rules
+from llm_parser.canonical import canonical_items
+# parse_rules(ex["rules_text"], client, givens=ex["givens"]).spec 과 ex 를 canonical_items로 비교
+```
+
+## 주의
+
+- **9칸 미만 `alldiff`는 넣지 않았다.** 현재 엔진은 ac3/full 전파에서 이런 제약이 있으면 해가 있어도
+  "해 없음"을 낸다(② 결함 A, `parser/for_engine_team/README.md`).
+- 킬러 예시는 현재 엔진에서 약 0.5초 걸린다(합 전파 미호출, 결함 B). 패치 적용 시 약 0.01초.
+- 퍼즐 생성기는 ④ 담당이라 생성 스크립트는 포함하지 않았다. 형식만 맞추면 ④가 만든 퍼즐도 여기에 추가할 수 있다.
