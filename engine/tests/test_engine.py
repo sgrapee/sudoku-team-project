@@ -181,6 +181,15 @@ def test_propagation_soundness(grid: Grid, easy_solution: dict, seed: int) -> No
         assert easy_solution[cell] in domains[cell], f"{cell}에서 정답 값이 제거됨"
 
 
+def test_killer_sum_is_propagated(grid: Grid) -> None:
+    """킬러 케이지는 != 아크가 있어도 합 전파가 돌아야 한다 (2칸 합 3 → {1, 2})."""
+    model = Model(grid, [KillerCage([(0, 0), (0, 1)], 3)])
+    assert any(isinstance(con, KillerCage) for con in model.global_constraints)
+    domains = model.initial_domains()
+    assert propagate(model, domains, "ac3", PropagationStats())
+    assert domains[(0, 0)] == {1, 2} and domains[(0, 1)] == {1, 2}
+
+
 # ------------------------------------------------------------------ 인간 기법
 def test_logical_solver_matches_truth(grid: Grid, easy_solution: dict) -> None:
     model = Model(grid)
