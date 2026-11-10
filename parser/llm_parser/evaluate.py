@@ -32,15 +32,42 @@ from pathlib import Path
 
 from . import parse_rules
 from .canonical import canonical_items, compare, safe_canonical
-from .checks import OutputFormatError, extract_json, split_output
+from .checks import OutputFormatError, extract_givens, extract_json, split_output
 from .clients import STOP_KINDS, LLMAPIError, LLMClient, ScriptedClient, Throttled, make_client
 
 HERE = Path(__file__).resolve().parent.parent
 DATA_DIR = HERE / "data"
-SPLITS = {"dev": ["rules_dev.jsonl"], "test": ["rules_test.jsonl"], "all": ["rules_dev.jsonl", "rules_test.jsonl"]}
+SPLITS = {"dev": ["rules_dev.jsonl"], "test": ["rules_test.jsonl"], "all": ["rules_dev.jsonl", "rules_test.jsonl"],
+          "nl": []}
+NL_PROMPTS = HERE.parent / "puzzles" / "nl_prompts.jsonl"
+
+
+def load_nl_prompts(path: Path = NL_PROMPTS) -> list[dict]:
+    """④-A가 만든 자연어 퍼즐 설명(datagen/nl_prompts.py)을 평가 항목으로 바꾼다.
+
+    ③이 직접 쓰지 않은 문장이라 독립 평가 세트로 쓴다. 단서 격자는 문장 안에 있지만
+    LLM이 아니라 코드(extract_givens)가 꺼내므로, 파싱 정확도는 constraints만 비교한다.
+    """
+    items: list[dict] = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            style = r.get("style", {})
+            items.append({
+                "id": r["id"], "text": r["text"],
+                "gold": {"constraints": r["spec"]["constraints"], "unsupported": False},
+                "tags": list(r.get("variant", [])) + [f"coord_{style.get('coord', '?')}",
+                                                      f"grid_{style.get('grid', '?')}", "nl4a"],
+                "givens": r["spec"].get("givens"), "author": "④-A",
+            })
+    return items
 
 
 def load_dataset(split: str = "test", data_dir: Path = DATA_DIR) -> list[dict]:
+    if split == "nl":
+        return load_nl_prompts()
     rows: list[dict] = []
     for name in SPLITS[split]:
         with open(data_dir / name, encoding="utf-8") as f:
@@ -63,6 +90,15 @@ def oracle_client(data: list[dict]) -> ScriptedClient:
     return ScriptedClient(lambda text, _a: json.dumps(by_text[text], ensure_ascii=False), "oracle")
 
 
+def _typo_cell(c) -> str:
+    """"r1c1" 또는 [0, 0] → "R1-C1" (LLM이 낼 법한 좌표 표기 오타)."""
+    if isinstance(c, str):
+        return c.replace("r", "R").replace("c", "-C")
+    if isinstance(c, dict):
+        c = [c.get("row", c.get("r")), c.get("col", c.get("c"))]
+    return f"R{int(c[0]) + 1}-C{int(c[1]) + 1}"
+
+
 def _corrupt(output: dict, kind: str) -> str:
     """LLM이 실제로 낼 법한 실수를 흉내 낸다."""
     cons = json.loads(json.dumps(output["constraints"]))
@@ -75,7 +111,7 @@ def _corrupt(output: dict, kind: str) -> str:
     elif kind == "cell_typo" and cons:
         for key in ("cells", "path"):
             if key in cons[0]:
-                cons[0][key] = [c.replace("r", "R").replace("c", "-C") for c in cons[0][key]]
+                cons[0][key] = [_typo_cell(c) for c in cons[0][key]]
                 break
         else:
             return "{'constraints': 작은따옴표}"
@@ -161,6 +197,8 @@ def evaluate(
             **cmp,
             "exact": cmp["exact"] and unsup_ok,
             "latency": round(time.perf_counter() - t0, 3),
+            # 문장 안 단서 격자를 코드가 정확히 꺼냈는지 (nl 세트처럼 정답 단서가 있을 때만)
+            "givens_ok": (extract_givens(item["text"]) == item["givens"]) if item.get("givens") else None,
             "input_tokens": tokens_in or None,
             "output_tokens": tokens_out or None,
         })
@@ -189,8 +227,10 @@ def summarize(rows: list[dict], price_in: float | None = None, price_out: float 
     cost = None
     if price_in is not None and price_out is not None and (tin or tout):
         cost = round(tin / 1e6 * price_in + tout / 1e6 * price_out, 4)
+    gv = [r["givens_ok"] for r in rows if r.get("givens_ok") is not None]
     return {
         "n": n,
+        "givens_extract_acc": (sum(gv) / len(gv)) if gv else None,          # 단서 격자 코드 추출 정확도
         "exact": sum(r["exact"] for r in rows) / n,                         # 최종 정답률
         "first_exact": sum(r["first_exact"] for r in rows) / n,             # 첫 시도 정답률
         "precision": p,
@@ -243,6 +283,7 @@ def format_summary(s: dict, name: str) -> str:
         f"| 평균 응답 시간 / 문장 | {s['avg_latency']:.2f}초 |",
         f"| API 오류 | {s['api_errors']}건 {s['api_error_kinds'] or ''} |",
         f"| 토큰 입력 / 출력 | {tok} |",
+        *([f"| 단서 격자 추출(코드) | {s['givens_extract_acc']:.1%} |"] if s.get("givens_extract_acc") is not None else []),
         f"| 예상 비용 | {cost} |",
         "",
         f"거부 단계: {s['reject_stages'] or '없음'}",
@@ -266,9 +307,11 @@ def format_aggregate(agg: dict, n_runs: int) -> str:
     return "\n".join(lines)
 
 
-def _save(rows: list[dict], summary: dict | None, out_dir: str, name: str, stamp: str) -> Path:
+def _save(rows: list[dict], summary: dict | None, out_dir: str, name: str, stamp: str, split: str = "") -> Path:
+    """파일 이름: <split>_<모델>[_partial]_<시각>.jsonl  예) test_gemini-3.5-flash_partial_20261110-171002.jsonl"""
     os.makedirs(out_dir, exist_ok=True)
-    tag = name.replace(":", "_").replace("/", "_") + ("" if summary else "_partial")
+    model = name.split(":")[-1].replace("/", "_")
+    tag = (f"{split}_" if split else "") + model + ("" if summary else "_partial")
     path = Path(out_dir) / f"{tag}_{stamp}.jsonl"
     with open(path, "w", encoding="utf-8") as f:
         for r in rows:
@@ -421,19 +464,19 @@ def main(argv: list[str] | None = None) -> int:
     except LLMAPIError as exc:
         print(f"\n\n[중단 — API 오류] {exc}")
         if rows:
-            print(f"그때까지 {len(rows)}문장 결과를 저장했습니다: {_save(rows, None, args.out, client.name, stamp)}")
+            print(f"그때까지 {len(rows)}문장 결과를 저장했습니다: {_save(rows, None, args.out, client.name, stamp, args.split)}")
         return 1
     except KeyboardInterrupt:
         print("\n\n[중단 — 사용자]")
         if rows:
-            print(f"그때까지 {len(rows)}문장 결과를 저장했습니다: {_save(rows, None, args.out, client.name, stamp)}")
+            print(f"그때까지 {len(rows)}문장 결과를 저장했습니다: {_save(rows, None, args.out, client.name, stamp, args.split)}")
         return 130
 
     summary = {"model": client.name, "split": args.split, "repeat": args.repeat, "runs": runs}
     if args.repeat > 1:
         summary["aggregate"] = aggregate(runs)
         print("\n" + format_aggregate(summary["aggregate"], args.repeat))
-    path = _save(rows, summary, args.out, client.name, stamp)
+    path = _save(rows, summary, args.out, client.name, stamp, args.split)
     print(f"\n결과 저장: {path}")
     return 0
 

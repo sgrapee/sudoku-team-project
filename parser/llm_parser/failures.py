@@ -203,7 +203,12 @@ def main(argv: list[str] | None = None) -> int:
     if not rows:
         print("evaluate 결과 파일이 아닙니다(baseline 결과는 지원하지 않음).")
         return 1
-    gold_by_id = {d["id"]: d for d in load_dataset("all")}
+    pool = load_dataset("all")
+    try:
+        pool += load_dataset("nl")
+    except FileNotFoundError:
+        pass
+    gold_by_id = {d["id"]: d for d in pool}
     missing = [r["id"] for r in rows if r["id"] not in gold_by_id]
     if missing:
         print(f"데이터셋에 없는 ID가 있습니다: {missing[:5]}")

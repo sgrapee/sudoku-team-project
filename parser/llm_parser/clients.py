@@ -310,11 +310,9 @@ class GeminiNativeClient:
         if status >= 400:
             err = data.get("error", {}) if isinstance(data, dict) else {}
             quota_id, delay = _parse_google_error(err)
-            msg = f"{err.get('status', '')} {err.get('message', raw[:200])}".strip()
-            if quota_id:
-                msg += f" [한도: {quota_id}]"
-            if delay:
-                msg += f" [권장 대기: {delay:g}초]"
+            # 한도 정보는 Google의 긴 안내문 뒤에 붙이면 화면에서 잘리므로 앞에 둔다
+            prefix = (f"[한도: {quota_id}] " if quota_id else "") + (f"[권장 대기: {delay:g}초] " if delay else "")
+            msg = prefix + f"{err.get('status', '')} {err.get('message', raw[:200])}".strip()
             raise _HTTPStatusError(status, msg, quota_id, delay)
         return data
 

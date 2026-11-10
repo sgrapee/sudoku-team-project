@@ -74,7 +74,8 @@ def _solvability(spec: dict, givens: str, time_limit: float) -> tuple[bool, str]
     from sudoku_engine.solver import Solver, SolverConfig
     from sudoku_engine.spec import load_spec
 
-    solver = Solver(load_spec({**spec, "givens": givens}), SolverConfig(time_limit=time_limit))
+    # propagation='fc': main 엔진의 결함 A(9칸 미만 alldiff + ac3/full 오판)를 피한다
+    solver = Solver(load_spec({**spec, "givens": givens}), SolverConfig(propagation="fc", time_limit=time_limit))
     n = len(solver.solve_all(limit=2))
     if n == 0 and solver.stats.timed_out:
         return False, "판정 불가: 제한 시간 안에 해 존재 여부를 확정하지 못했습니다."

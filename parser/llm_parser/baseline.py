@@ -180,7 +180,8 @@ def run_pipeline(p: dict, client: LLMClient, max_attempts: int = 3, solve_time_l
     result = parse_rules(p["rules_text"], client, max_attempts=max_attempts, givens=p["givens"])
     grid, solve_note = None, ""
     if result.status in ("ok", "unsupported"):
-        r = solve(load_spec(result.spec), SolverConfig(time_limit=solve_time_limit))
+        # fc: main 엔진의 결함 A(9칸 미만 alldiff + ac3/full 오판) 회피
+        r = solve(load_spec(result.spec), SolverConfig(propagation="fc", time_limit=solve_time_limit))
         if r.solved:
             grid = _grid_str(r.solution)
         else:
@@ -354,7 +355,7 @@ def main(argv: list[str] | None = None) -> int:
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    tag = "baseline_" + client.name.replace(":", "_").replace("/", "_")
+    tag = f"baseline_{args.puzzles}_" + client.name.split(":")[-1].replace("/", "_")
     with open(out / f"{tag}_{stamp}.jsonl", "w", encoding="utf-8") as f:
         for r in all_rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
