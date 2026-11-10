@@ -85,6 +85,9 @@ class AllDifferent(Constraint):
                             return False
                         changed = True
             # 2) hidden single: 이 묶음에서 값 v가 갈 수 있는 칸이 하나뿐이면 확정
+            #    (모든 값이 반드시 나오는 '꽉 찬' 묶음일 때만 성립)
+            if len(_values_in(domains, cells)) != len(cells):
+                continue
             for v in _values_in(domains, cells):
                 spots = [c for c in cells if v in domains[c]]
                 if not spots:
