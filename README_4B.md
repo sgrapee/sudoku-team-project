@@ -9,7 +9,7 @@
 
 ## 실행 방법
 
-`engine` 폴더로 이동한 뒤:
+저장소 루트에서:
 
 ```bash
 # E1: 변수 선택/값 선택 휴리스틱 비교
@@ -19,21 +19,24 @@ python analyze.py results/E1_raw.csv
 # E2: 현재 구현된 제약 전파 단계 비교
 python run_bench.py --experiment E2 --limit 3 --time-limit 2
 python analyze.py results/E2_raw.csv
+
+# 데이터셋(jsonl) 사용: --puzzles에 .txt/.jsonl 파일을 여러 개 줄 수 있다
+python run_bench.py --experiment E1 --puzzles puzzles/bench/classic.jsonl
 ```
 
-`--limit 3`은 쉬운 퍼즐 파일과 어려운 퍼즐 파일에서 각각 최대 3개씩 읽는다는 뜻이다. 예비 실행은 빠른 점검용이며, 최종 실험에서는 `--limit`을 생략하고 충분한 시간 제한과 반복 측정을 협의한다.
+`--limit 3`은 입력 파일마다 최대 3개씩 읽는다는 뜻이다. `--puzzles`를 주지 않으면 기존처럼 `engine/puzzles_easy.txt`, `engine/puzzles_hard.txt`를 읽는다. 예비 실행은 빠른 점검용이며, 최종 실험에서는 `--limit`을 생략하고 충분한 시간 제한과 반복 측정을 협의한다.
 
 ## 실험 설계
 
 - E1: 전파 수준을 FC로 고정하고 `static / mrv / mrv_degree` × `asc / lcv` 6개 설정을 비교한다.
 - E2: 변수·값 선택을 `mrv / asc`로 고정하고 현재 구현된 `none / fc / ac3 / full` 4개 단계를 비교한다.
-- 저장 열: puzzle_id, 설정, solved, timed_out, nodes, branch_nodes, backtracks, assignments, elapsed_ms 등.
+- 저장 열: puzzle_id, 설정, solved, timed_out, nodes, branch_nodes, backtracks, assignments, elapsed_ms 등. 입력 정보로 source_file, variant, tier, givens, expected_solutions(해 개수, txt 입력은 빈칸)도 남긴다.
 
 ## 반드시 공유할 구현상 한계
 
 현재 `sudoku_engine/propagation.py`의 `ac3()` 내부에서 `_hidden_singles_unit()`을 호출한다. 따라서 현재 `propagation="ac3"`는 **순수 AC-3가 아니라 Hidden Single 검사를 포함한 AC-3**다. 계획서의 E2에서 요구한 `순수 AC-3`와 `AC-3 + hidden single`을 구분하려면 ② 알고리즘 담당자가 코드를 분리하고 테스트해야 한다. 이번 예비 실행 결과를 순수 AC-3 결과라고 부르면 안 된다.
 
-또한 이번 실행기는 기존 `puzzles_easy.txt` / `puzzles_hard.txt` 형식(한 줄당 81자 퍼즐)을 사용한다. 계획서의 최종 공통 데이터 형식인 `puzzles/{variant}_{difficulty}.jsonl`에서 퍼즐별 `spec`을 읽는 기능은 ④-A와 JSONL 스키마를 확정한 뒤 추가해야 한다.
+실행기는 `--puzzles`로 공통 데이터 형식인 `puzzles/*.jsonl`도 읽는다. jsonl 퍼즐은 `load_spec(spec)`으로 만들어서 변형 제약도 함께 들어간다. 레코드 형식과 비교용 세트(`puzzles/bench/`)는 `puzzles/README.md`에 있다.
 
 ## 예비 실행 결과 — 최종 결과 아님
 
