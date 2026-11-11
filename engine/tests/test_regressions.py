@@ -2,7 +2,7 @@
 
 import pytest
 
-from sudoku_engine import AllDifferent, Grid, KillerCage, Model, SolverConfig, solve
+from sudoku_engine import AllDifferent, Grid, KillerCage, Model, Solver, SolverConfig, solve
 from sudoku_engine.spec import spec_to_model_or_reason
 
 G = Grid()
@@ -47,6 +47,21 @@ def test_timeout_is_not_reported_as_no_solution(monkeypatch):
     monkeypatch.setattr(solver_mod, "SolverConfig", tiny)
     model, reason = spec_to_model_or_reason({"givens": "." * 81, "constraints": []})
     assert "해가 존재하지 않습니다" not in reason
+
+
+def test_solver_trace_reaches_same_final_solution():
+    """GUI 재생용 탐색 추적의 마지막 상태는 실제 solver 해답과 같아야 한다."""
+    from sudoku_engine.spec import load_spec
+
+    puzzle = "530070000600195000098000060800060003400803001700020006060000280000419005000080079"
+    trace = []
+    result = Solver(load_spec({"givens": puzzle}), SolverConfig(), trace=trace).solve()
+
+    assert result.solved
+    assert trace[0].kind == "start"
+    assert trace[-1].kind == "solution"
+    assert trace[-1].assignment == result.solution
+    assert any(event.kind == "try" for event in trace)
 
 
 # --- 크래시 입력은 ValueError가 아니라 SpecError(검증 실패)여야 한다 -----------------

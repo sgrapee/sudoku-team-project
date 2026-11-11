@@ -7,7 +7,7 @@ from .constraints import (
 )
 from .model import Model
 from .solver import (
-    Solver, SolverConfig, SolverResult, SolverStats,
+    Solver, SolverConfig, SolverResult, SolverStats, TraceEvent,
     solve, count_solutions, has_unique_solution,
 )
 
@@ -15,6 +15,6 @@ __all__ = [
     "Cell", "Domains", "Grid", "full_domains", "copy_domains",
     "Constraint", "AllDifferent", "KillerCage", "Thermometer", "Arrow",
     "Sandwich", "Parity", "LessThan", "classic_constraints", "diagonal_constraints",
-    "Model", "Solver", "SolverConfig", "SolverResult", "SolverStats",
+    "Model", "Solver", "SolverConfig", "SolverResult", "SolverStats", "TraceEvent",
     "solve", "count_solutions", "has_unique_solution",
 ]

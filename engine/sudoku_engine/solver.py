@@ -14,7 +14,7 @@ import random
 import time
 from dataclasses import dataclass, field
 
-from .core import Cell, Domains, copy_domains, solved_assignment
+from .core import Cell, Domains, copy_domains, partial_assignment, solved_assignment
 from .model import Model
 from .propagation import LEVELS, PropagationStats, initial_propagate, propagate
 
@@ -83,6 +83,17 @@ class SolverResult:
         return self.solution is not None
 
 
+@dataclass
+class TraceEvent:
+    """GUI가 실제 탐색 과정을 재생할 수 있도록 남기는 한 시점의 상태."""
+
+    kind: str
+    assignment: dict[Cell, int]
+    cell: Cell | None = None
+    value: int | None = None
+    depth: int = 0
+
+
 class _Timeout(Exception):
     pass
 
@@ -90,13 +101,32 @@ class _Timeout(Exception):
 class Solver:
     """CSP 백트래킹 탐색기."""
 
-    def __init__(self, model: Model, config: SolverConfig | None = None) -> None:
+    def __init__(
+        self,
+        model: Model,
+        config: SolverConfig | None = None,
+        trace: list[TraceEvent] | None = None,
+    ) -> None:
         self.model = model
         self.config = config or SolverConfig()
         self.rng = random.Random(self.config.seed)
         self.stats = SolverStats()
         self._pstats = PropagationStats()
         self._deadline: float | None = None
+        self.trace = trace if trace is not None else []
+
+    def _emit(
+        self,
+        kind: str,
+        domains: Domains,
+        cell: Cell | None = None,
+        value: int | None = None,
+        depth: int = 0,
+    ) -> None:
+        """현재 싱글턴 도메인을 복사해 탐색 추적에 기록한다."""
+        self.trace.append(
+            TraceEvent(kind, dict(partial_assignment(domains)), cell, value, depth)
+        )
 
     # ------------------------------------------------------------ 공개 API
     def solve(self) -> SolverResult:
@@ -111,6 +141,7 @@ class Solver:
     def _run(self, limit: int) -> list[dict[Cell, int]]:
         self.stats = SolverStats()
         self._pstats = PropagationStats()
+        self.trace.clear()
         start = time.perf_counter()
         if self.config.time_limit is not None:
             self._deadline = start + self.config.time_limit
@@ -123,8 +154,9 @@ class Solver:
         if givens_ok:
             ok = initial_propagate(self.model, domains, self.config.propagation, self._pstats)
             if ok:
+                self._emit("start", domains)
                 try:
-                    self._search(domains, set(), results, limit)
+                    self._search(domains, set(), results, limit, depth=0)
                 except _Timeout:
                     self.stats.timed_out = True
 
@@ -134,7 +166,12 @@ class Solver:
         return results
 
     def _search(
-        self, domains: Domains, assigned: set[Cell], results: list, limit: int
+        self,
+        domains: Domains,
+        assigned: set[Cell],
+        results: list,
+        limit: int,
+        depth: int,
     ) -> bool:
         """찾은 해가 limit에 도달하면 True를 돌려 위로 전파한다.
 
@@ -153,6 +190,7 @@ class Solver:
         if cell is None:
             assignment = solved_assignment(domains)
             if assignment is not None and self.model.is_valid(assignment):
+                self._emit("solution", domains, depth=depth)
                 results.append(assignment)
                 return len(results) >= limit
             return False
@@ -165,6 +203,7 @@ class Solver:
             self.stats.assignments += 1
             trial = copy_domains(domains)
             trial[cell] = {value}
+            self._emit("try", trial, cell, value, depth)
 
             if self.config.propagation == "none":
                 partial = {c: next(iter(trial[c])) for c in assigned}
@@ -178,9 +217,11 @@ class Solver:
                 )
 
             if ok:
-                if self._search(trial, assigned | {cell}, results, limit):
+                self._emit("propagate", trial, cell, value, depth)
+                if self._search(trial, assigned | {cell}, results, limit, depth + 1):
                     return True
             self.stats.backtracks += 1
+            self._emit("backtrack", domains, cell, value, depth)
 
         return False
 

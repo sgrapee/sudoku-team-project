@@ -26,7 +26,7 @@ ENGINE_DIR = ROOT / "engine"
 if str(ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(ENGINE_DIR))
 
-from sudoku_engine import SolverConfig, count_solutions, solve  # noqa: E402
+from sudoku_engine import Solver, SolverConfig, count_solutions, solve  # noqa: E402
 from sudoku_engine.spec import SpecError, load_spec  # noqa: E402
 from sudoku_engine.techniques import next_hint, rate_difficulty  # noqa: E402
 
@@ -44,6 +44,7 @@ COLORS = {
     "peer": "#F0F4FF",
     "given": "#172033",
     "user": "#2563EB",
+    "trying": "#F97316",
     "solved": "#059669",
     "danger": "#DC2626",
     "success_bg": "#ECFDF5",
@@ -114,8 +115,8 @@ def givens_to_values(raw: Any) -> dict[tuple[int, int], int]:
 
 
 class SudokuDemoApp(tk.Tk):
-    CELL = 48
-    MARGIN = 34
+    CELL = 46
+    MARGIN = 32
     BOARD = CELL * 9
     CANVAS = BOARD + MARGIN * 2
 
@@ -134,6 +135,16 @@ class SudokuDemoApp(tk.Tk):
         self.value_source: dict[tuple[int, int], str] = {}
         self.selected: tuple[int, int] | None = None
         self.hint_cells: set[tuple[int, int]] = set()
+        self.trace_events: list[Any] = []
+        self.trace_index = 0
+        self.trace_total = 0
+        self.solve_result: Any = None
+        self.animation_job: str | None = None
+        self.animating = False
+        self.paused = False
+        self.locked_values: dict[tuple[int, int], int] = {}
+        self.locked_sources: dict[tuple[int, int], str] = {}
+        self.speed_var = tk.StringVar(value="보통")
 
         self.title_var = tk.StringVar(value="퍼즐을 선택하세요")
         self.subtitle_var = tk.StringVar(value="예제를 불러오거나 빈 보드에서 시작할 수 있습니다.")
@@ -174,12 +185,12 @@ class SudokuDemoApp(tk.Tk):
         )
 
     def _build_header(self) -> None:
-        header = tk.Frame(self, bg=COLORS["panel"], height=70)
+        header = tk.Frame(self, bg=COLORS["panel"], height=66)
         header.pack(fill="x")
         header.pack_propagate(False)
 
         brand = tk.Frame(header, bg=COLORS["panel"])
-        brand.pack(side="left", padx=28, pady=11)
+        brand.pack(side="left", padx=28, pady=9)
         logo = tk.Canvas(brand, width=44, height=44, bg=COLORS["panel"], highlightthickness=0)
         logo.pack(side="left", padx=(0, 12))
         logo.create_rectangle(3, 3, 41, 41, fill=COLORS["primary"], outline="", width=0)
@@ -207,7 +218,7 @@ class SudokuDemoApp(tk.Tk):
 
     def _build_content(self) -> None:
         shell = tk.Frame(self, bg=COLORS["bg"])
-        shell.pack(fill="both", expand=True, padx=24, pady=14)
+        shell.pack(fill="both", expand=True, padx=24, pady=10)
 
         left = tk.Frame(shell, bg=COLORS["bg"])
         left.pack(side="left", fill="both", expand=True)
@@ -228,6 +239,19 @@ class SudokuDemoApp(tk.Tk):
                 side="left", padx=3
             )
         self._small_button(pad, "지우기", lambda: self.enter_value(0), 7).pack(side="left", padx=(10, 3))
+
+        legend = tk.Frame(board_card, bg=COLORS["panel"])
+        legend.pack(pady=(0, 12))
+        for label, color in (
+            ("처음 단서", COLORS["given"]),
+            ("직접 입력", COLORS["user"]),
+            ("탐색 중", COLORS["trying"]),
+            ("최종 확정", COLORS["solved"]),
+        ):
+            item = tk.Frame(legend, bg=COLORS["panel"])
+            item.pack(side="left", padx=9)
+            tk.Label(item, text="●", bg=COLORS["panel"], fg=color, font=("Segoe UI", 9)).pack(side="left")
+            tk.Label(item, text=label, bg=COLORS["panel"], fg=COLORS["muted"], font=("Malgun Gothic", 8)).pack(side="left", padx=(3, 0))
 
         right = tk.Frame(shell, bg=COLORS["panel"], width=410, highlightbackground="#E5EAF2", highlightthickness=1)
         right.pack(side="right", fill="y")
@@ -291,7 +315,25 @@ class SudokuDemoApp(tk.Tk):
             side="left", fill="x", expand=True, padx=(5, 0)
         )
 
-        self._button(inner, "퍼즐 풀기", self.solve_board, primary=True).pack(fill="x", pady=(0, 9))
+        speed_row = tk.Frame(inner, bg=COLORS["panel"])
+        speed_row.pack(fill="x", pady=(0, 8))
+        tk.Label(
+            speed_row, text="탐색 재생 속도", bg=COLORS["panel"], fg=COLORS["muted"],
+            font=("Malgun Gothic", 9),
+        ).pack(side="left")
+        self.speed_box = ttk.Combobox(
+            speed_row, textvariable=self.speed_var, state="readonly",
+            values=("느리게", "보통", "빠르게"), width=8, style="Demo.TCombobox",
+        )
+        self.speed_box.pack(side="right")
+
+        play_row = tk.Frame(inner, bg=COLORS["panel"])
+        play_row.pack(fill="x", pady=(0, 9))
+        self._button(play_row, "과정 보며 풀기", self.solve_board, primary=True).pack(
+            side="left", fill="x", expand=True, padx=(0, 5)
+        )
+        self.pause_button = self._button(play_row, "일시정지", self.toggle_pause, primary=False)
+        self.pause_button.pack(side="left", padx=(5, 0))
         self._button(inner, "처음 상태로 되돌리기", self.reset_board, primary=False).pack(fill="x")
 
         stats = tk.Label(
@@ -349,6 +391,7 @@ class SudokuDemoApp(tk.Tk):
         self.bind("<F5>", lambda _event: self.solve_board())
 
     def load_selected_example(self) -> None:
+        self._cancel_animation()
         spec = self.example_lookup.get(self.example_box.get())
         if spec is None:
             return
@@ -371,6 +414,7 @@ class SudokuDemoApp(tk.Tk):
         self.after(60, self._analyze_current)
 
     def new_blank(self) -> None:
+        self._cancel_animation()
         self.current_spec = {
             "name": "blank",
             "title": "빈 클래식 스도쿠",
@@ -395,6 +439,7 @@ class SudokuDemoApp(tk.Tk):
         self.draw_board()
 
     def reset_board(self) -> None:
+        self._cancel_animation()
         self.values = dict(self.original_values)
         self.value_source = {cell: "given" for cell in self.original_values}
         self.hint_cells.clear()
@@ -439,11 +484,19 @@ class SudokuDemoApp(tk.Tk):
         return spec
 
     def solve_board(self) -> None:
-        self.status_var.set("CSP 엔진이 MRV·LCV·AC-3으로 해답을 탐색하고 있습니다…")
+        if self.animating:
+            return
+        self.status_var.set("CSP 엔진이 실제 탐색 과정을 기록하고 있습니다…")
         self.update_idletasks()
         try:
             model = load_spec(self._current_spec_with_values())
-            result = solve(model, SolverConfig(var_order="mrv_degree", val_order="lcv", propagation="ac3", time_limit=8.0))
+            trace: list[Any] = []
+            solver = Solver(
+                model,
+                SolverConfig(var_order="mrv_degree", val_order="lcv", propagation="ac3", time_limit=8.0),
+                trace=trace,
+            )
+            result = solver.solve()
         except SpecError as exc:
             self._show_error("입력 오류", str(exc))
             return
@@ -456,18 +509,120 @@ class SudokuDemoApp(tk.Tk):
             messagebox.showwarning("풀이 실패", "현재 입력으로는 해답을 찾지 못했습니다.")
             return
 
+        self.locked_values = dict(self.values)
+        self.locked_sources = dict(self.value_source)
+        self.solve_result = result
+        self.trace_total = len(trace)
+        self.trace_events = self._trim_trace(trace, max_events=650)
+        self.trace_index = 0
+        self.animating = True
+        self.paused = False
+        self.pause_button.configure(text="일시정지")
+        self.stats_var.set(
+            f"탐색 과정 재생 중 · 전체 {self.trace_total}단계\n"
+            "주황색은 임시 값이며 백트래킹 때 바뀔 수 있습니다."
+        )
+        self._animate_trace()
+
+    def _trim_trace(self, trace: list[Any], max_events: int) -> list[Any]:
+        """발표가 지나치게 길어지지 않도록 긴 추적은 앞·중간·끝을 균등 표본화한다."""
+        if len(trace) <= max_events:
+            return trace
+        head = trace[:120]
+        tail = trace[-30:]
+        middle = trace[120:-30]
+        slots = max_events - len(head) - len(tail)
+        step = len(middle) / slots
+        sampled = [middle[min(int(i * step), len(middle) - 1)] for i in range(slots)]
+        return head + sampled + tail
+
+    def _animation_delay(self) -> int:
+        return {"느리게": 260, "보통": 110, "빠르게": 35}.get(self.speed_var.get(), 110)
+
+    def _animate_trace(self) -> None:
+        if not self.animating or self.paused:
+            return
+        if self.trace_index >= len(self.trace_events):
+            self._finish_animation()
+            return
+
+        event = self.trace_events[self.trace_index]
+        self.trace_index += 1
+        self.values = dict(self.locked_values)
+        self.value_source = dict(self.locked_sources)
+        for cell, value in event.assignment.items():
+            if cell not in self.locked_values:
+                self.values[cell] = value
+                self.value_source[cell] = "solved" if event.kind == "solution" else "trying"
+
+        self.hint_cells = {event.cell} if event.cell is not None else set()
+        if event.cell is not None:
+            self.selected = event.cell
+        stage = {
+            "start": "초기 제약 전파",
+            "try": "후보 시도",
+            "propagate": "제약 전파",
+            "backtrack": "모순 발견 → 이전 단계로 복귀",
+            "solution": "해답 확정",
+        }.get(event.kind, event.kind)
+        cell_text = ""
+        if event.cell is not None:
+            cell_text = f" · r{event.cell[0] + 1}c{event.cell[1] + 1}={event.value}"
+        shown = self.trace_index
+        total = len(self.trace_events)
+        self.status_var.set(f"탐색 {shown}/{total} · {stage}{cell_text}")
+        self.draw_board()
+        self.animation_job = self.after(self._animation_delay(), self._animate_trace)
+
+    def toggle_pause(self) -> None:
+        if not self.animating:
+            self.status_var.set("현재 재생 중인 탐색 과정이 없습니다.")
+            return
+        self.paused = not self.paused
+        self.pause_button.configure(text="계속" if self.paused else "일시정지")
+        if self.paused:
+            if self.animation_job is not None:
+                self.after_cancel(self.animation_job)
+                self.animation_job = None
+            self.status_var.set(f"탐색 과정 일시정지 · {self.trace_index}/{len(self.trace_events)}")
+        else:
+            self._animate_trace()
+
+    def _finish_animation(self) -> None:
+        self.animating = False
+        self.paused = False
+        self.animation_job = None
+        self.pause_button.configure(text="일시정지")
+        result = self.solve_result
+        if result is None or result.solution is None:
+            return
+        self.values = dict(self.locked_values)
+        self.value_source = dict(self.locked_sources)
         for cell, value in result.solution.items():
-            if cell not in self.values:
+            if cell not in self.locked_values:
                 self.values[cell] = value
                 self.value_source[cell] = "solved"
         stats = result.stats.as_dict()
+        sampled = "" if self.trace_total == len(self.trace_events) else f" · {len(self.trace_events)}단계 표본 재생"
         self.stats_var.set(
-            f"풀이 완료  ·  {stats['elapsed_ms']:.1f} ms\n"
+            f"풀이 완료  ·  {stats['elapsed_ms']:.1f} ms{sampled}\n"
             f"탐색 노드 {stats['nodes']}  ·  분기 {stats['branch_nodes']}  ·  백트랙 {stats['backtracks']}"
         )
-        self.status_var.set("풀이 완료 · 초록색 숫자는 CSP 엔진이 채운 값입니다.")
+        self.status_var.set("풀이 완료 · 초록색은 최종 확정값, 파란색은 사용자가 직접 입력한 값입니다.")
         self.hint_cells.clear()
         self.draw_board()
+
+    def _cancel_animation(self) -> None:
+        if self.animation_job is not None:
+            try:
+                self.after_cancel(self.animation_job)
+            except tk.TclError:
+                pass
+        self.animation_job = None
+        self.animating = False
+        self.paused = False
+        if hasattr(self, "pause_button"):
+            self.pause_button.configure(text="일시정지")
 
     def check_board(self) -> None:
         try:
@@ -544,6 +699,9 @@ class SudokuDemoApp(tk.Tk):
             self.draw_board()
 
     def enter_value(self, value: int) -> None:
+        if self.animating:
+            self.status_var.set("탐색 과정 재생을 일시정지하거나 초기화한 뒤 숫자를 입력하세요.")
+            return
         if self.selected is None:
             self.status_var.set("먼저 숫자를 입력할 칸을 선택하세요.")
             return
@@ -601,7 +759,12 @@ class SudokuDemoApp(tk.Tk):
         for cell, value in self.values.items():
             x, y = self._center(cell)
             source = self.value_source.get(cell, "user")
-            color = COLORS["given"] if source == "given" else (COLORS["solved"] if source == "solved" else COLORS["user"])
+            color = {
+                "given": COLORS["given"],
+                "user": COLORS["user"],
+                "trying": COLORS["trying"],
+                "solved": COLORS["solved"],
+            }.get(source, COLORS["user"])
             weight = "bold" if source == "given" else "normal"
             canvas.create_text(x, y + 1, text=str(value), fill=color, font=("Segoe UI", 21, weight))
 
