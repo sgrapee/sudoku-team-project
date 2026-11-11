@@ -55,7 +55,7 @@ class Model:
         # 인간 기법용 유닛(=AllDifferent 묶음) 목록
         self.units: list[list[Cell]] = [
             list(con.scope()) for con in self.constraints
-            if isinstance(con, AllDifferent)
+            if isinstance(con, AllDifferent) and len(con.scope()) == g.size
         ]
         self.units_of: dict[Cell, list[list[Cell]]] = defaultdict(list)
         for unit in self.units:

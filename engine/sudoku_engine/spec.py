@@ -118,6 +118,10 @@ def _parse_givens(raw: Any, grid: Grid) -> dict[Cell, int]:
             out[cell] = int(val)
         return out
     if isinstance(raw, list):  # 9x9 중첩 리스트
+        if len(raw) != grid.size or any(
+            not isinstance(row, (list, tuple)) or len(row) != grid.size for row in raw
+        ):
+            raise SpecError(f"givens: {grid.size}x{grid.size} 배열이어야 합니다")
         out = {}
         for r, row in enumerate(raw):
             for c, val in enumerate(row):
@@ -229,15 +233,20 @@ def load_spec(spec: dict | str) -> Model:
     if not isinstance(spec, dict):
         raise SpecError("최상위는 객체(dict)여야 합니다")
 
-    size = int(spec.get("size", 9))
-    box_rows = int(spec.get("box_rows", 3 if size == 9 else 2))
-    box_cols = int(spec.get("box_cols", size // box_rows))
     try:
+        size = int(spec.get("size", 9))
+        box_rows = int(spec.get("box_rows", 3 if size == 9 else 2))
+        box_cols = int(spec.get("box_cols", size // box_rows))
         grid = Grid(size, box_rows, box_cols)
-    except ValueError as exc:
-        raise SpecError(str(exc)) from exc
+    except (ValueError, TypeError, ZeroDivisionError) as exc:
+        raise SpecError(f"size/box 설정이 잘못되었습니다: {exc}") from exc
 
-    givens = _parse_givens(spec.get("givens") or spec.get("puzzle"), grid)
+    try:
+        givens = _parse_givens(spec.get("givens") or spec.get("puzzle"), grid)
+    except SpecError:
+        raise
+    except (ValueError, TypeError, KeyError, AttributeError, IndexError) as exc:
+        raise SpecError(f"givens: 해석할 수 없습니다: {exc}") from exc
     for cell, v in givens.items():
         if not 1 <= v <= grid.size:
             raise SpecError(f"givens: {cell}의 값 {v}가 범위를 벗어납니다")
@@ -254,6 +263,9 @@ def load_spec(spec: dict | str) -> Model:
             built.extend(_build_constraint(item, grid))
         except SpecError as exc:
             raise SpecError(f"constraints[{i}] — {exc}") from exc
+        except (ValueError, TypeError, KeyError, AttributeError, IndexError) as exc:
+            # int("열둘"), 셀 표기 오류 등 하위 함수의 예외를 사람이 읽을 수 있는 SpecError로 바꾼다
+            raise SpecError(f"constraints[{i}] — 값을 해석할 수 없습니다: {exc}") from exc
 
     model = Model(grid, built, givens, include_classic=True)
 
@@ -274,13 +286,16 @@ def validate_spec(spec: dict | str) -> tuple[bool, str]:
 
 def spec_to_model_or_reason(spec: dict | str) -> tuple[Model | None, str]:
     """풀이 가능성까지 확인한다. 해가 없으면 그 사실을 메시지로 알린다."""
-    from .solver import SolverConfig, count_solutions
+    from .solver import Solver, SolverConfig
 
     try:
         model = load_spec(spec)
     except SpecError as exc:
         return None, f"명세 오류: {exc}"
-    n = count_solutions(model, limit=2, config=SolverConfig(time_limit=10.0))
+    solver = Solver(model, SolverConfig(time_limit=10.0))
+    n = len(solver.solve_all(limit=2))
+    if n == 0 and solver.stats.timed_out:
+        return model, "판정 불가: 제한 시간 안에 해를 찾지 못했습니다(해가 없다는 뜻은 아님)"
     if n == 0:
         return None, "명세는 문법적으로 맞지만 해가 존재하지 않습니다"
     if n > 1:
