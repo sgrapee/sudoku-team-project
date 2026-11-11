@@ -257,8 +257,13 @@ class SudokuDemoApp(tk.Tk):
         right.pack(side="right", fill="y")
         right.pack_propagate(False)
 
+        # 실행 버튼은 오른쪽 패널 하단에 고정한다. 설명이 길어져도 시연 버튼이
+        # 화면 밖으로 밀려나지 않도록 정보 영역과 분리한 구조다.
+        action_dock = tk.Frame(right, bg=COLORS["panel"])
+        action_dock.pack(side="bottom", fill="x", padx=24, pady=(6, 16))
+
         inner = tk.Frame(right, bg=COLORS["panel"])
-        inner.pack(fill="both", expand=True, padx=24, pady=22)
+        inner.pack(side="top", fill="both", expand=True, padx=24, pady=(18, 4))
 
         self._section_label(inner, "DEMO PUZZLE")
         choices: list[str] = []
@@ -299,14 +304,14 @@ class SudokuDemoApp(tk.Tk):
 
         self._section_label(inner, "RULE SUMMARY")
         self.rule_text = tk.Text(
-            inner, height=6, wrap="word", bg="#F8FAFC", fg="#475569",
+            inner, height=4, wrap="word", bg="#F8FAFC", fg="#475569",
             relief="flat", font=("Malgun Gothic", 9), padx=10, pady=9,
             selectbackground=COLORS["selected"],
         )
         self.rule_text.pack(fill="x", pady=(7, 16))
         self.rule_text.configure(state="disabled")
 
-        action_row = tk.Frame(inner, bg=COLORS["panel"])
+        action_row = tk.Frame(action_dock, bg=COLORS["panel"])
         action_row.pack(fill="x", pady=(0, 9))
         self._button(action_row, "AI 힌트", self.show_hint, primary=False).pack(
             side="left", fill="x", expand=True, padx=(0, 5)
@@ -315,7 +320,7 @@ class SudokuDemoApp(tk.Tk):
             side="left", fill="x", expand=True, padx=(5, 0)
         )
 
-        speed_row = tk.Frame(inner, bg=COLORS["panel"])
+        speed_row = tk.Frame(action_dock, bg=COLORS["panel"])
         speed_row.pack(fill="x", pady=(0, 8))
         tk.Label(
             speed_row, text="탐색 재생 속도", bg=COLORS["panel"], fg=COLORS["muted"],
@@ -327,17 +332,17 @@ class SudokuDemoApp(tk.Tk):
         )
         self.speed_box.pack(side="right")
 
-        play_row = tk.Frame(inner, bg=COLORS["panel"])
+        play_row = tk.Frame(action_dock, bg=COLORS["panel"])
         play_row.pack(fill="x", pady=(0, 9))
         self._button(play_row, "과정 보며 풀기", self.solve_board, primary=True).pack(
             side="left", fill="x", expand=True, padx=(0, 5)
         )
         self.pause_button = self._button(play_row, "일시정지", self.toggle_pause, primary=False)
         self.pause_button.pack(side="left", padx=(5, 0))
-        self._button(inner, "처음 상태로 되돌리기", self.reset_board, primary=False).pack(fill="x")
+        self._button(action_dock, "처음 상태로 되돌리기", self.reset_board, primary=False).pack(fill="x")
 
         stats = tk.Label(
-            inner, textvariable=self.stats_var, bg=COLORS["success_bg"], fg="#047857",
+            action_dock, textvariable=self.stats_var, bg=COLORS["success_bg"], fg="#047857",
             font=("Malgun Gothic", 9), anchor="w", justify="left", wraplength=340,
             padx=12, pady=10,
         )
