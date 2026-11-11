@@ -14,6 +14,10 @@
 | 엔진 테스트 | `engine/tests/` |
 | AI 파서 테스트 | `parser/tests/` |
 | AI 평가 문장과 결과 확인 | `parser/data/`, `parser/results/` |
+| 생성된 난이도별 퍼즐 데이터 | `puzzles/` |
+| 퍼즐 생성·검증 코드 | `datagen/` |
+| 알고리즘 성능 비교 | `python run_bench.py` |
+| 발표 시연용 화면 실행 | `python run_gui.py` |
 
 ## 폴더 구조
 
@@ -33,9 +37,25 @@ sudoku-team-project/
 │  ├─ requirements.txt
 │  └─ README.md            # 파서 상세 설명
 ├─ examples/               # 공용 변형 스도쿠 JSON 예제
+├─ puzzles/                # 종류·난이도별 생성 퍼즐 데이터셋
+├─ datagen/                # 퍼즐 생성 및 데이터 검증 도구
+├─ gui/                    # 발표 시연용 데스크톱 GUI
+├─ run_gui.py              # GUI 바로 실행
+├─ run_bench.py            # 탐색 알고리즘 벤치마크
 ├─ .gitignore
 └─ README.md
 ```
+
+## 발표 시연용 GUI
+
+외부 GUI 패키지 없이 Python 기본 `tkinter`로 실행됩니다.
+
+```powershell
+python run_gui.py
+```
+
+예제 선택, 숫자 입력, 변형 제약 시각화, 논리 힌트, 자동 풀이, 난이도·유일해·탐색 통계를 한 화면에서 확인할 수 있습니다.
+상세한 시연 순서는 [GUI 문서](gui/README.md)를 참고하세요.
 
 ## 빠른 실행
 
