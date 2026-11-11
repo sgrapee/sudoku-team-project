@@ -6,7 +6,7 @@
 ```bash
 cd parser
 pip install -r requirements.txt     # pytest + (openai·anthropic용 SDK). gemini는 추가 설치 불필요
-python -m pytest -q tests/          # 130개 통과 + 실제 API 테스트 1개 skip (API 키 불필요)
+python -m pytest -q tests/          # 145개 통과 + 실제 API 테스트 1개 skip (API 키 불필요)
 
 python -m llm_parser.evaluate --client oracle      # 채점기 점검 (100%여야 정상)
 python -m llm_parser.evaluate --client noisy       # 재시도 루프 점검 (가짜 LLM이 일부러 틀림)
@@ -46,7 +46,7 @@ python -m llm_parser.evaluate --client gemini --sleep 6 --repeat 3
 
 | 옵션 | 의미 |
 |---|---|
-| `--split test/dev/all` | 평가 데이터 선택 (기본 test) |
+| `--split test/dev/all/nl` | 평가 데이터 선택 (기본 test). `nl`은 ④-A가 만든 자연어 퍼즐 설명 40개 |
 | `--repeat N` | 같은 데이터로 N회 반복, 평균 ± 표준편차 출력 |
 | `--sleep 6` | 호출 사이 최소 간격(초). 무료 등급 분당 제한 대비 |
 | `--model 이름` / `--list-models` | 모델 지정 / 내 키로 쓸 수 있는 모델 목록 |
@@ -75,7 +75,7 @@ python -m llm_parser.evaluate --client gemini --sleep 6 --repeat 3
 
 ```powershell
 $env:SUDOKU_LLM_MODEL="gemini-3.5-flash"
-python -m llm_parser.evaluate --client gemini --split dev --sleep 6 --resume results\gemini_gemini-3.5-flash_partial_<시각>.jsonl
+python -m llm_parser.evaluate --client gemini --split dev --sleep 6 --resume results\dev_gemini-3.5-flash_partial_<시각>.jsonl
 ```
 
 - 503 과부하로 실패한 요청도 한도에 포함될 수 있다. 한도가 빠듯하면 `--repeat`을 줄이고 보고서에 반복 횟수를 적는다
@@ -83,7 +83,8 @@ python -m llm_parser.evaluate --client gemini --split dev --sleep 6 --resume res
 
 - 측정 전 짧은 호출 1회로 키·크레딧·모델을 먼저 확인한다
 - 키·크레딧 문제는 즉시 한국어 한 줄로 알리고 멈춘다. 중간에 멈추면 그때까지 결과를 `results/*_partial.jsonl`로 저장
-- 결과: `results/<모델>_<시각>.jsonl`(반복·문장별 원문 출력, 시도별 단계·사유·토큰·지연, API 오류) + `_summary.json`
+- 결과: `results/<split>_<모델>_<시각>.jsonl`(반복·문장별 원문 출력, 시도별 단계·사유·토큰·지연, API 오류) + `_summary.json`
+  예) `test_gemini-3.5-flash_20261110-171002.jsonl`, 중간 저장은 `..._partial_...`. (2026-11-03 이전 결과는 `gemini_gemini-3.5-flash_...` 형식이며 `--resume`에 그대로 쓸 수 있다)
 
 ---
 
@@ -159,7 +160,22 @@ result.error        # api_error일 때 {"kind": "auth" | "billing" | "refusal" |
 
 "합이 1 틀린 조용한 오류"는 문장이 아니라 LLM 출력의 실수라서 `noisy` 클라이언트(`silent_flip`)로 재현한다.
 
-**데이터를 한 사람이 써서 표현이 치우쳐 있다. 다른 팀원이 쓴 문장을 test에 추가하는 것을 권장한다.**
+**dev·test는 ③ 한 사람이 써서 표현이 치우쳐 있다.** 이를 보완하는 독립 세트로 ④-A의 자연어 퍼즐 설명을 쓴다.
+
+### `--split nl` — ④-A 자연어 퍼즐 설명 40개 (`puzzles/nl_prompts.jsonl`)
+
+`datagen/nl_prompts.py`가 ④의 퍼즐에서 만든 "문제 설명 전체 + 정답 명세" 쌍. ③이 쓰지 않은 문장이다.
+
+- 변형: thermo 10, arrow 10, 대각선+온도계+화살표 혼합 10, diagonal 6, classic 4
+- 좌표 표기 3종(`r3c2` / `3행 2열` / `(3, 2)`) × 단서 격자 2종(9줄 / 81자 한 줄)을 번갈아 사용
+- 문장 안에 단서 격자가 들어 있지만 LLM이 옮겨 적지 않는다. **`checks.extract_givens`가 코드로 꺼내고**,
+  그 정확도를 "단서 격자 추출(코드)" 지표로 따로 보인다(40/40 확인)
+- 정답 명세는 엔진 검증·그럴듯함 검사를 모두 통과한다(테스트로 보장). few-shot과 겹치지 않는다
+- 태그: 변형 이름, `coord_rc/korean/paren`, `grid_rows/string`, `nl4a` — 표기별 정확도를 바로 볼 수 있다
+
+```powershell
+python -m llm_parser.evaluate --client gemini --split nl --sleep 6
+```
 
 ## 4. 지표
 
@@ -200,7 +216,7 @@ noisy에서 틀린 2문장은 모두 검증을 통과해 버린 조용한 오류
 | 3-3 실제 LLM 평가 준비 | ✅ `--repeat`, 모델명·실행 시각·반복 번호·지연·원문·오류 저장, 키 없으면 실제 API 테스트 skip |
 | 4-3 저장소 정리 | ✅ 배포 zip에서 캐시 제거, `parser/.gitignore`에 `results/` |
 | 공통 요청 | ✅ 저장소 루트 `examples/`에 명세 5개 (`examples/README.md`) |
-| 1-x 엔진 수정 | ⛔ ② 담당. `engine_fixes/`에 보고와 패치만 보관 |
+| 1-x 엔진 수정 | ⛔ ② 담당. PR #5에서 해결(③이 검증), `engine_fixes/`에 처리 현황 기록 |
 | 2-1 Structured Outputs, 2-2 needs_clarification | ⏸ 이번 범위에서 제외 (정보 부족은 `unsupported`의 "정보 부족:"으로 기록) |
 | 4-1 루트 README, 4-2 패키징, 4-4 CI | ⏸ ① 결정 사항이라 제외 |
 
@@ -213,10 +229,10 @@ noisy에서 틀린 2문장은 모두 검증을 통과해 버린 조용한 오류
 | LLM 단독 | 규칙 문장 + 단서 격자를 주고 LLM이 81자 정답 격자를 직접 출력(풀이 과정 서술 허용, 마지막에 JSON) |
 | 파서 + 엔진 | 같은 LLM으로 규칙 → JSON 명세(③), ② 엔진이 탐색으로 풀이 |
 
-- 퍼즐: `examples/` 변형 5개 + `engine/puzzles_easy·hard.txt` 앞 5개씩(일반 스도쿠) = 15개
+- 퍼즐: `examples/` 변형 전부(현재 10개) + `engine/puzzles_easy·hard.txt` 앞 5개씩(일반 스도쿠) = 20개
 - 지표: 정답률, 제약 만족률, 칸 정확도·단서 유지율(격자를 얻은 경우), 위반 제약 수(기본 27개 / 변형), 격자를 못 얻은 건수, 호출 수, 시간, 토큰
 - 실제 LLM: `python -m llm_parser.baseline --client gemini --sleep 6 --repeat 3` (`--max-tokens`로 응답 길이 조절. Anthropic 기본 8192, Gemini는 모델 기본값)
-- 가짜 LLM 결과(noisy, 15퍼즐): LLM 단독 정답률 0%(칸 정확도 93.2%, 기본 제약 평균 9.17개 위반, 형식 실패 3건) vs 파서+엔진 100%.
+- 가짜 LLM 결과(noisy, 20퍼즐): LLM 단독 정답률 0%(칸 정확도 92.0%, 기본 제약 평균 10.67개 위반, 형식 실패 5건) vs 파서+엔진 100%.
   **noisy는 일부러 칸을 틀리게 만든 가짜 LLM이라 실제 LLM 성능이 아니다.** 채점기가 차이를 제대로 잡는지 확인하는 용도
 
 ## 7. 파싱 실패 케이스 분류 (`failures.py`)
@@ -254,7 +270,19 @@ test 세트를 한 사람이 쓰면 표현이 치우친다. 다른 팀원이 쓴
 
 **프롬프트를 고친 뒤 test 결과를 보고 다시 고치면 test가 dev가 된다.** 새 문장은 프롬프트를 확정한 뒤 평가에만 쓰는 것이 좋다.
 
-## 9. 알려진 한계
+## 9. 2026-11-10 main 기준 변경 사항
+
+| 변경 | 내용 |
+|---|---|
+| 결과 파일 이름 | `<split>_<모델>_<시각>.jsonl` — dev·test·nl 결과가 이름으로 구분된다 |
+| 한도 오류 표시 | `[한도: ...PerDay... (한도 N회)]`를 오류 메시지 맨 앞에 표시(화면에서 잘리지 않게) |
+| `--split nl` | ④-A 자연어 퍼즐 설명 40개를 독립 평가 세트로 사용, 단서 격자는 코드로 추출 |
+| `checks.extract_givens` | 문장 속 단서 격자(9줄 / 81자)를 코드로 추출 — GUI·파이프라인에서 재사용 가능 |
+| noisy 가짜 LLM | `[0, 0]` 형식 좌표에서도 "좌표 오타" 흉내가 동작하도록 수정(④ 명세 형식 대응) |
+| `engine_fixes/` | PR #5(②)가 결함 A·B·C와 입력 크래시를 모두 고친 것을 확인. 겹치는 패치는 삭제하고 처리 현황·검증 결과만 기록 |
+| 결함 A 회피 | PR #5 머지 전에도 동작하도록 풀이 가능성 검사·baseline 풀이에 `fc` 전파 사용 |
+
+## 10. 알려진 한계
 
 - **실제 LLM으로 측정하지 못했다.** 모든 수치는 가짜 LLM(oracle·noisy) 결과다
 - 샌드위치 index만 0부터 세서 LLM이 틀리기 쉽다(엔진이 1-indexed 키를 받아주면 해결 → ② 협의)
@@ -264,6 +292,6 @@ test 세트를 한 사람이 쓰면 표현이 치우친다. 다른 팀원이 쓴
 - 의미 단위 비교라, 엔진에서 동치인 다른 표현(9칸 alldiff 두 개 vs diagonal)은 오답으로 잡힌다
 - `injection` 문장의 정답은 "지시문은 무시, unsupported 아님"으로 정했다. 지시문을 unsupported에 적는 모델은 오답 처리된다
 - 데이터가 54문장이라 test에서 1문장이 약 2.8%p다
-- baseline 퍼즐은 15개뿐이다. ④ 생성기 퍼즐을 `examples/` 형식(rules_text·solution 포함)으로 추가하면 자동으로 늘어난다
+- baseline 퍼즐은 20개뿐이다. ④ 생성기 퍼즐을 `examples/` 형식(rules_text·solution 포함)으로 추가하면 자동으로 늘어난다
 - 실패 유형 분류는 규칙 기반이라, 여러 실수가 겹친 문장은 "내용 오류"나 "누락/추가"로 뭉뚱그려질 수 있다
 - `datacheck`는 정답 명세가 문장과 실제로 일치하는지까지는 확인하지 못한다. 문장과 정답은 작성자가 직접 대조해야 한다

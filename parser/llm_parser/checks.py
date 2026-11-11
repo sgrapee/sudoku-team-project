@@ -169,3 +169,23 @@ def plausibility_problems(spec: dict) -> list[str]:
     if dups:
         problems.append(f"의미가 같은 제약이 {len(dups)}건 중복되었습니다. 같은 제약은 한 번만 출력하세요")
     return problems
+
+
+def extract_givens(text: str) -> str | None:
+    """퍼즐 설명 문장 안의 단서 격자를 코드로 꺼낸다(LLM에게 81칸을 옮겨 적게 하지 않는다).
+
+    지원 형식: 9자씩 9줄(공백·| 구분 허용) 또는 81자 한 줄. 빈칸은 '.' 또는 '0' → '.'로 통일.
+    여러 개가 있으면 마지막 것을 쓴다. 없으면 None.
+    """
+    lines = [re.sub(r"[\s|]", "", ln) for ln in text.splitlines()]
+    found: list[str] = []
+    for ln in lines:
+        if re.fullmatch(r"[0-9.]{81}", ln):
+            found.append(ln)
+    for i in range(len(lines) - 8):
+        block = lines[i:i + 9]
+        if all(re.fullmatch(r"[0-9.]{9}", b) for b in block):
+            found.append("".join(block))
+    if not found:
+        return None
+    return found[-1].replace("0", ".")

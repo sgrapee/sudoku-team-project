@@ -371,7 +371,7 @@ def test_cli_offline_runs_and_saves(tmp_path):
     assert main(["--client", "noisy", "--repeat", "2", "--out", str(tmp_path)]) == 0
     summary = json.loads(next(tmp_path.glob("*_summary.json")).read_text(encoding="utf-8"))
     assert len(summary["runs"]) == 2 and "aggregate" in summary
-    first = json.loads(next(tmp_path.glob("noisy_*.jsonl")).read_text(encoding="utf-8").splitlines()[0])
+    first = json.loads(next(tmp_path.glob("test_noisy_*.jsonl")).read_text(encoding="utf-8").splitlines()[0])
     for key in ["model", "run_index", "run_started_at", "latency", "attempts", "error"]:
         assert key in first
 
@@ -537,7 +537,7 @@ def test_failure_report_on_noisy_results(tmp_path):
     from llm_parser.evaluate import main as eval_main
 
     assert eval_main(["--client", "noisy", "--out", str(tmp_path)]) == 0
-    res_file = next(p for p in tmp_path.glob("noisy_*.jsonl"))
+    res_file = next(p for p in tmp_path.glob("test_noisy_*.jsonl"))
     md, csv_path = tmp_path / "r.md", tmp_path / "r.csv"
     assert F.main([str(res_file), "--md", str(md), "--csv", str(csv_path)]) == 0
     text = md.read_text(encoding="utf-8")
@@ -827,7 +827,7 @@ def test_daily_quota_stops_evaluation_and_saves_partial(gemini_key, monkeypatch,
     real_make = E.make_client
     monkeypatch.setattr(E, "make_client", lambda kind, model=None: C.GeminiClient(model, transport=transport))
     assert E.main(["--client", "gemini", "--split", "dev", "--out", str(tmp_path)]) == 1
-    partial = next(tmp_path.glob("*_partial_*.jsonl"))
+    partial = next(tmp_path.glob("dev_gemini-3.8-flash_partial_*.jsonl"))
     rows = [json.loads(l) for l in partial.read_text(encoding="utf-8").splitlines()]
     assert [r["status"] for r in rows][:3] == ["ok", "ok", "ok"] and rows[-1]["error"]["kind"] == "quota_daily"
 
@@ -836,7 +836,7 @@ def test_daily_quota_stops_evaluation_and_saves_partial(gemini_key, monkeypatch,
     calls_before = state["n"]
     assert E.main(["--client", "gemini", "--split", "dev", "--resume", str(partial), "--out", str(tmp_path)]) == 0
     assert state["n"] - calls_before == 1 + (len(DEV) - 3), "연결 확인 1회 + 남은 문장만 호출"
-    final = max(tmp_path.glob("gemini_*_summary.json"), key=lambda p: p.stat().st_mtime)
+    final = max(tmp_path.glob("dev_gemini-3.8-flash_*_summary.json"), key=lambda p: p.stat().st_mtime)
     summary = json.loads(final.read_text(encoding="utf-8"))
     assert summary["runs"][0]["n"] == len(DEV) and summary["runs"][0]["exact"] == 1.0
     monkeypatch.setattr(E, "make_client", real_make)
@@ -849,3 +849,65 @@ def test_resume_refuses_different_model(tmp_path):
     f.write_text(json.dumps({"model": "gemini:a", "run_index": 1, "id": "R02", "status": "ok"}) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="모델"):
         _load_resume(str(f), "gemini:b", {"R02"})
+
+
+
+# ============================================================ ④-A 자연어 퍼즐 설명 (--split nl)
+from llm_parser.checks import extract_givens  # noqa: E402
+
+NL = load_dataset("nl")
+
+
+def test_nl_split_loads_team_prompts():
+    assert len(NL) == 40 and all(d["author"] == "④-A" for d in NL)
+    assert not ({d["text"] for d in NL} & {t for t, _ in FEW_SHOTS})
+    for d in NL:
+        s = {"constraints": d["gold"]["constraints"]}
+        assert safe_validate(s)[0] and plausibility_problems(s) == [], d["id"]
+
+
+def test_extract_givens_from_all_nl_prompts():
+    assert all(extract_givens(d["text"]) == d["givens"] for d in NL)
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("단서:\n" + "\n".join(["5 3 . | . 7 . | . . ."] + ["0" * 9] * 8), "53..7...." + "." * 72),
+    ("81자: " + "1" * 81, None),               # 앞에 글자가 붙은 줄은 격자로 보지 않는다
+    ("격자\n" + "1" * 81 + "\n끝", "1" * 81),
+    ("격자 없음", None),
+])
+def test_extract_givens_formats(text, expected):
+    assert extract_givens(text) == expected
+
+
+def test_nl_oracle_and_noisy():
+    _, s = evaluate(NL, oracle_client(NL))
+    assert s["exact"] == 1.0 and s["givens_extract_acc"] == 1.0
+    _, s = evaluate(NL, noisy_client(NL))
+    assert s["final_validation_pass"] == 1.0 and s["first_validation_pass"] < 1.0
+
+
+def test_result_filenames_include_split(tmp_path):
+    assert main(["--client", "oracle", "--split", "nl", "--out", str(tmp_path)]) == 0
+    names = sorted(p.name for p in tmp_path.iterdir())
+    assert any(n.startswith("nl_oracle_") and n.endswith(".jsonl") for n in names)
+    assert any(n.startswith("nl_oracle_") and n.endswith("_summary.json") for n in names)
+
+
+def test_quota_info_comes_first_in_message(gemini_key):
+    t = _gemini_reply(error=_quota_error("GenerateRequestsPerDayPerProjectPerModel-FreeTier"), status=429)
+    r = parse_rules("x", _gem(t))
+    assert r.error["detail"].startswith("[한도: GenerateRequestsPerDay")
+
+
+def test_failures_report_understands_nl_ids(tmp_path):
+    assert main(["--client", "noisy", "--split", "nl", "--out", str(tmp_path)]) == 0
+    res = next(tmp_path.glob("nl_noisy_*.jsonl"))
+    assert F.main([str(res)]) == 0
+
+
+def test_partial_alldiff_spec_not_rejected_as_unsolvable():
+    """main 엔진 결함 A(9칸 미만 alldiff + ac3 오판)를 파서가 피하는지."""
+    out = json.dumps({"constraints": [{"type": "alldiff", "cells": ["r1c1", "r2c2", "r3c3", "r4c5"]}]})
+    r = parse_rules("x", ScriptedClient(lambda t, a: out), givens="." * 81, check_solvable=True, max_attempts=1)
+    assert r.status == "ok", [a.feedback for a in r.attempts]
