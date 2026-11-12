@@ -199,6 +199,8 @@ def evaluate(
             "latency": round(time.perf_counter() - t0, 3),
             # 문장 안 단서 격자를 코드가 정확히 꺼냈는지 (nl 세트처럼 정답 단서가 있을 때만)
             "givens_ok": (extract_givens(item["text"]) == item["givens"]) if item.get("givens") else None,
+            "credit": (sum(a.credit for a in result.attempts if a.credit is not None)
+                       if any(a.credit is not None for a in result.attempts) else None),
             "input_tokens": tokens_in or None,
             "output_tokens": tokens_out or None,
         })
@@ -246,6 +248,8 @@ def summarize(rows: list[dict], price_in: float | None = None, price_out: float 
         "input_tokens": tin or None,
         "output_tokens": tout or None,
         "est_cost_usd": cost,
+        "deducted_credit": (round(sum(r["credit"] for r in rows if r.get("credit") is not None), 4)
+                            if any(r.get("credit") is not None for r in rows) else None),
         "status": dict(Counter(r["status"] for r in rows)),
         "reject_stages": dict(Counter(a["stage"] for r in rows for a in r["attempts"] if a["stage"])),
         "exact_by_tag": {t: f"{sum(v)}/{len(v)}" for t, v in sorted(by_tag.items())},
@@ -285,6 +289,7 @@ def format_summary(s: dict, name: str) -> str:
         f"| 토큰 입력 / 출력 | {tok} |",
         *([f"| 단서 격자 추출(코드) | {s['givens_extract_acc']:.1%} |"] if s.get("givens_extract_acc") is not None else []),
         f"| 예상 비용 | {cost} |",
+        *([f"| 실제 차감 크레딧 (FactChat) | {s['deducted_credit']} |"] if s.get("deducted_credit") is not None else []),
         "",
         f"거부 단계: {s['reject_stages'] or '없음'}",
         f"태그별 정답: {s['exact_by_tag']}",
@@ -354,6 +359,50 @@ def _preflight(client: LLMClient) -> None:
     print("연결 확인 완료. 측정을 시작합니다.\n")
 
 
+def _diagnose_factchat(model: str | None) -> int:
+    """FactChat 연결 진단: 키(앞 3글자·길이), 잔여 크레딧, 모델 목록, 짧은 요청. 키 전체는 출력하지 않는다."""
+    import os
+
+    from .clients import FactChatClient
+
+    key = (os.environ.get("FACTCHAT_API_KEY") or "").strip()
+    print("== 1. 키")
+    if not key:
+        print("  FACTCHAT_API_KEY 환경변수가 없습니다.")
+        return 1
+    print(f"  앞부분 {key[:3]}…  길이 {len(key)}  공백 포함 {any(ch.isspace() for ch in key)}")
+    client = FactChatClient(model, require_model=False)
+    print(f"  주소 {client.base}")
+    print("== 2. 잔여 크레딧 (/credits/)")
+    try:
+        print("  " + json.dumps(client.credits(), ensure_ascii=False)[:300])
+    except Exception as exc:  # noqa: BLE001
+        print(f"  실패: HTTP {getattr(exc, 'status_code', '?')} — {' '.join(str(exc).split())[:200]}")
+    print("== 3. 모델 목록 (/models/?type=llm)")
+    try:
+        names = client.list_models()
+        pick = [n for n in names if any(k in n for k in ("flash", "haiku", "luna", "mini"))]
+        print(f"  {len(names)}개. 가벼운 모델: {', '.join(pick[:15]) or '없음'}")
+        if client.model:
+            print(f"  지정 모델 '{client.model}' 목록에 있음: {client.model in names}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  실패: HTTP {getattr(exc, 'status_code', '?')} — {' '.join(str(exc).split())[:200]}")
+    if client.model:
+        print(f"== 4. 짧은 요청 (모델 {client.model}, 재시도 없음)")
+        client.max_retries = 0
+        try:
+            out = client.complete("JSON 객체 {} 하나만 출력하세요.", [{"role": "user", "content": "ping"}])
+            meta = client.last_meta
+            print(f"  성공 — 응답={out[:60]!r} 토큰 {meta.get('input_tokens')}/{meta.get('output_tokens')} "
+                  f"차감 크레딧 {meta.get('credit')}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  실패: {' '.join(str(exc).split())[:300]}")
+    else:
+        print("== 4. 짧은 요청: --model을 주면 시험합니다")
+    print("\n위 출력 전체를 그대로 공유하면 원인을 찾을 수 있습니다(키 전체는 출력되지 않음).")
+    return 0
+
+
 def _diagnose(model: str | None) -> int:
     """Gemini 연결 문제를 한 번에 확인한다. 키 전체는 출력하지 않는다."""
     import os
@@ -394,7 +443,7 @@ def _diagnose(model: str | None) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="LLM 파서 정확도 측정")
-    ap.add_argument("--client", default="oracle", choices=["oracle", "noisy", "anthropic", "openai", "gemini", "gemini-openai"])
+    ap.add_argument("--client", default="oracle", choices=["oracle", "noisy", "anthropic", "openai", "gemini", "gemini-openai", "factchat"])
     ap.add_argument("--model", default=None)
     ap.add_argument("--split", default="test", choices=list(SPLITS))
     ap.add_argument("--repeat", type=int, default=1, help="같은 데이터로 반복 측정할 횟수 (실제 LLM은 2~3 권장)")
@@ -413,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--max-attempts와 --repeat는 1 이상이어야 합니다")
 
     if args.diagnose:
-        return _diagnose(args.model)
+        return _diagnose_factchat(args.model) if args.client == "factchat" else _diagnose(args.model)
     data = load_dataset(args.split)
     real = args.client not in ("oracle", "noisy")
     try:
@@ -422,7 +471,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.client == "noisy":
             client = noisy_client(data)
         else:
-            client = make_client(args.client, args.model)
+            # 모델 목록만 볼 때는 모델 이름이 아직 없어도 된다
+            client = make_client(args.client, args.model or ("(목록 조회)" if args.list_models else None))
             if args.list_models:
                 names = client.list_models() if hasattr(client, "list_models") \
                     else sorted(m.id for m in client._client.models.list())

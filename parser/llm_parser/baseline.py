@@ -300,7 +300,7 @@ class PuzzleMock:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="LLM 단독 풀이 baseline vs 파서+엔진")
-    ap.add_argument("--client", default="oracle", choices=["oracle", "noisy", "anthropic", "openai", "gemini", "gemini-openai"])
+    ap.add_argument("--client", default="oracle", choices=["oracle", "noisy", "anthropic", "openai", "gemini", "gemini-openai", "factchat"])
     ap.add_argument("--model", default=None)
     ap.add_argument("--puzzles", default="all", choices=["examples", "classic", "all"])
     ap.add_argument("--methods", default="both", choices=["both", "llm_only", "pipeline"])

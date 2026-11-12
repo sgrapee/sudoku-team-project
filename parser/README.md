@@ -34,6 +34,7 @@ API 키는 **환경변수로만** 넣는다. 코드·테스트·README·커밋�
 
 | 제공자 | 환경변수 | 비고 |
 |---|---|---|
+| `factchat` | `FACTCHAT_API_KEY` | 숭실대 학생용 API Gateway. 추가 설치 불필요, 실제 차감 크레딧 기록 |
 | `gemini` | `GEMINI_API_KEY` | https://aistudio.google.com 에서 무료 발급(신용카드 불필요), 호출 제한 있음. **팀 기본 LLM** |
 | `anthropic` | `ANTHROPIC_API_KEY` | 선불 크레딧 필요 |
 | `openai` | `OPENAI_API_KEY` | 선불 크레딧 필요 |
@@ -53,6 +54,32 @@ python -m llm_parser.evaluate --client gemini --sleep 6 --repeat 3
 
 | `--price-in`, `--price-out` | 토큰 가격(USD/100만 토큰)을 주면 예상 비용 계산 |
 | `--no-strict` | 그럴듯함 검사 끄기(비교 실험용) |
+
+### 숭실대 FactChat API Gateway (`--client factchat`) — 팀 기본 LLM 후보
+
+학교가 학생에게 제공하는 API. **추가 설치가 필요 없다**(표준 라이브러리만 사용).
+공식 문서: https://docs.mindlogic.ai/docs/ssu/api-gateway/getting-started/overview
+
+```powershell
+$env:FACTCHAT_API_KEY="학교 사이트 > API Gateway에서 발급한 키"     # 다시 볼 수 없으니 따로 보관
+python -m llm_parser.evaluate --client factchat --diagnose              # 키·잔여 크레딧·모델 목록 확인
+$env:SUDOKU_LLM_MODEL="gemini-3.5-flash"                               # 목록에 있는 ID 그대로
+python -m llm_parser.evaluate --client factchat --diagnose               # 짧은 요청까지 시험
+python -m llm_parser.evaluate --client factchat --split dev
+```
+
+| 항목 | 내용 |
+|---|---|
+| 주소 | `https://factchat-cloud.mindlogic.ai/v1/gateway` (기본값. 바꿀 때만 `FACTCHAT_BASE_URL`) |
+| 호출 | `POST /chat/completions/` (OpenAI 형식), 인증 `Authorization: Bearer <키>` |
+| 모델 | `gemini-3.5-flash`, `claude-haiku-5-5`, `gpt-6-luna` 등. `--list-models`로 확인 |
+| 한도 | 회원당 60초 120회(초과 시 429 → 자동 재시도). 크레딧 소진 402, 모델 미허용 403 → 즉시 중단 |
+| 비용 기록 | 응답의 `billing.deducted_credit`를 문장별(`credit`)·요약(`deducted_credit`)에 저장 → **실제 사용 크레딧** 보고 가능 |
+
+- 크레딧은 **키를 만든 계정**에서 차감된다. 키를 팀원과 공유하지 말 것
+- `temperature`·`response_format`은 보내지 않는다(GPT-5 계열은 temperature 1만 허용, JSON 모드는 문서에 없음). 형식은 프롬프트 + 재시도로 맞춘다
+- 추론형 모델은 생각 토큰이 `max_tokens`에 포함된다. baseline처럼 긴 답이 필요하면 `--max-tokens 16000` 이상 권장(문서 권고)
+- 문서 경로·인증·오류 형식을 흉내 낸 로컬 가짜 게이트웨이로 진단·목록·측정을 확인했다. **실제 FactChat 서버로는 아직 시험하지 않았다**
 
 ### Gemini 키 형식 (2026-11 확인)
 
@@ -234,6 +261,22 @@ noisy에서 틀린 2문장은 모두 검증을 통과해 버린 조용한 오류
 - 실제 LLM: `python -m llm_parser.baseline --client gemini --sleep 6 --repeat 3` (`--max-tokens`로 응답 길이 조절. Anthropic 기본 8192, Gemini는 모델 기본값)
 - 가짜 LLM 결과(noisy, 20퍼즐): LLM 단독 정답률 0%(칸 정확도 92.0%, 기본 제약 평균 10.67개 위반, 형식 실패 5건) vs 파서+엔진 100%.
   **noisy는 일부러 칸을 틀리게 만든 가짜 LLM이라 실제 LLM 성능이 아니다.** 채점기가 차이를 제대로 잡는지 확인하는 용도
+
+## 6-1. LLM 연동 풀이 평가: 백트래킹 vs 지역 탐색 (`solver_eval.py`)
+
+자연어 퍼즐 50개(nl_prompts 40 + examples 10)를 LLM이 **퍼즐당 한 번** 파싱하고, 같은 명세를
+② 백트래킹(`solve`)과 ② 지역 탐색(`solve_local_search`)에 그대로 넣는다. 정답 격자와 비교해 채점한다.
+
+```bash
+python -m llm_parser.solver_eval --client oracle --limit 5                      # 점검 (LLM 호출 없음)
+python -m llm_parser.solver_eval --client factchat --model gemini-3.5-flash     # 실제 (약 50회 호출 + 재시도)
+python -m llm_parser.solver_eval --specs results/solver_specs_<...>.jsonl       # 파싱 결과 재사용 (크레딧 0)
+```
+
+- 방법: 백트래킹 2종(mrv_degree/lcv/ac3, static/asc/none), min-conflicts 2종(init random/row, `--trials`회 seed 반복). ② 벤치마크 기본값과 같다.
+- 파싱 실패는 모든 방법에서 실패로 센다. 실패 시도의 시간은 `--time-limit`으로 센다.
+- 같은 퍼즐을 정답 명세(LLM 없음)로도 풀어 "LLM 탓"과 "알고리즘 탓"을 나눈다.
+- 결과: `results/solver_eval_*.md`(보고서용 표), `_summary.json`, `.jsonl`(시도별).
 
 ## 7. 파싱 실패 케이스 분류 (`failures.py`)
 
