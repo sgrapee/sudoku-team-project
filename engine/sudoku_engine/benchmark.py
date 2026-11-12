@@ -13,6 +13,7 @@ from dataclasses import asdict
 
 from .constraints import Constraint
 from .core import Cell, Grid
+from .local_search import LocalSearchConfig, solve_local_search
 from .model import Model
 from .solver import Solver, SolverConfig, count_solutions, solve
 
@@ -133,6 +134,81 @@ def run_configs(
             }
         )
     rows.append({"config": f"(공통 퍼즐 {len(common)}개 기준)"})
+    return rows
+
+
+# ----------------------------------------------- 방법 비교: 백트래킹 vs 지역 탐색
+def run_method_comparison(
+    puzzles: list[str | dict[Cell, int] | Model],
+    constraints: list[Constraint] | None = None,
+    time_limit: float = 5.0,
+    bt_configs: list[SolverConfig] | None = None,
+    ls_configs: list[LocalSearchConfig] | None = None,
+    trials: int = 1,
+    seed: int = 0,
+) -> list[dict]:
+    """같은 퍼즐을 같은 시간 제한으로 백트래킹과 지역 탐색(min-conflicts)에 풀게 한다.
+
+    - puzzles의 각 항목은 81자 문자열, 단서 딕셔너리, 또는 완성된 Model이다. 퍼즐마다 제약이 다른
+      변형 스도쿠는 Model을 직접 넘긴다(이때 constraints 인자는 무시된다).
+    - 백트래킹은 결정적이라 퍼즐당 1회, 지역 탐색은 무작위라 퍼즐당 trials회(seed를 바꿔) 돈다.
+    - '시도' 하나 = (퍼즐, seed) 하나. solve_rate = 푼 시도 / 전체 시도.
+    - median_ms_solved는 푼 시도만의 중앙값이라 '쉬운 것만 푸는' 방법이 유리해 보인다(생존 편향).
+      그래서 실패를 time_limit으로 세어 평균 낸 avg_ms_fail_as_limit을 함께 낸다. 비교는 이 열로 한다.
+    - steps(탐색 단위)가 방법마다 달라 노드 수는 비교 열에 넣지 않는다.
+    """
+    grid = Grid()
+    bt_configs = bt_configs if bt_configs is not None else [
+        SolverConfig(var_order="mrv_degree", val_order="lcv", propagation="ac3"),
+        SolverConfig(var_order="static", val_order="asc", propagation="none"),
+    ]
+    ls_configs = ls_configs if ls_configs is not None else [
+        LocalSearchConfig(init="random"),
+        LocalSearchConfig(init="row"),
+    ]
+
+    def make_model(p: str | dict[Cell, int] | Model) -> Model:
+        if isinstance(p, Model):
+            return p
+        model = Model(grid, constraints)
+        if isinstance(p, str):
+            model.load_puzzle(p)
+        else:
+            model.set_givens(p)
+        return model
+
+    def summarize(label: str, kind: str, runs: list[tuple[bool, float]]) -> dict:
+        solved_times = [t for ok, t in runs if ok]
+        penalized = [t if ok else time_limit for ok, t in runs]
+        return {
+            "method": label,
+            "kind": kind,
+            "solved": f"{len(solved_times)}/{len(runs)}",
+            "solve_rate": f"{100 * len(solved_times) / len(runs):.0f}%" if runs else "-",
+            "median_ms_solved": round(statistics.median(solved_times) * 1000, 2) if solved_times else None,
+            "avg_ms_fail_as_limit": round(statistics.mean(penalized) * 1000, 1) if penalized else None,
+        }
+
+    rows: list[dict] = []
+    for cfg in bt_configs:
+        cfg.time_limit = time_limit
+        runs = []
+        for p in puzzles:
+            res = solve(make_model(p), cfg)
+            runs.append((res.solved, res.stats.elapsed))
+        rows.append(summarize("backtracking/" + cfg.label(), "backtracking", runs))
+
+    for lcfg in ls_configs:
+        runs = []
+        for i, p in enumerate(puzzles):
+            for t in range(trials):
+                run_cfg = LocalSearchConfig(
+                    noise=lcfg.noise, patience=lcfg.patience, init=lcfg.init,
+                    max_steps=lcfg.max_steps, seed=seed + 1000 * i + t, time_limit=time_limit,
+                )
+                res = solve_local_search(make_model(p), run_cfg)
+                runs.append((res.solved, res.stats.elapsed))
+        rows.append(summarize(lcfg.label(), "local_search", runs))
     return rows
 
 

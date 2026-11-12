@@ -5,6 +5,9 @@ from .constraints import (
     Constraint, AllDifferent, KillerCage, Thermometer, Arrow,
     Sandwich, Parity, LessThan, classic_constraints, diagonal_constraints,
 )
+from .local_search import (
+    LocalSearchConfig, LocalSearchResult, LocalSearchStats, solve_local_search,
+)
 from .model import Model
 from .solver import (
     Solver, SolverConfig, SolverResult, SolverStats, TraceEvent,
@@ -17,4 +20,5 @@ __all__ = [
     "Sandwich", "Parity", "LessThan", "classic_constraints", "diagonal_constraints",
     "Model", "Solver", "SolverConfig", "SolverResult", "SolverStats", "TraceEvent",
     "solve", "count_solutions", "has_unique_solution",
+    "LocalSearchConfig", "LocalSearchResult", "LocalSearchStats", "solve_local_search",
 ]
