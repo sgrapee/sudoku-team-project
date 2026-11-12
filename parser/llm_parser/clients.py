@@ -26,7 +26,8 @@ _RETRYABLE_STATUS = {429, 500, 502, 503, 529}
 # kind → (재시도 가능 여부, 안내 문구)
 ERROR_KINDS = {
     "auth": (False, "API 키가 잘못되었습니다. 환경변수에 넣은 키를 확인하세요(예시 문구·공백·일부만 복사)."),
-    "billing": (False, "API 키는 맞지만 크레딧(잔액)이 없습니다. 충전하거나 --client gemini(무료 등급)를 쓰세요."),
+    "billing": (False, "API 키는 맞지만 크레딧(잔액)이나 사용 한도가 부족합니다. 충전·한도를 확인하거나 다른 제공자를 쓰세요."),
+    "config": (False, "실행 설정이 빠졌습니다."),
     "permission": (False, "이 키로는 접근 권한이 없습니다(403)."),
     "model": (False, "모델 이름을 찾을 수 없습니다. --list-models로 확인하고 --model로 지정하세요."),
     "refusal": (False, "모델이 응답을 거부했습니다."),
@@ -54,7 +55,7 @@ class LLMAPIError(RuntimeError):
 
 # 이전 버전 호환: 설정 오류(키·크레딧·모델)
 LLMSetupError = LLMAPIError
-SETUP_KINDS = {"auth", "billing", "permission", "model"}
+SETUP_KINDS = {"auth", "billing", "permission", "model", "config"}
 # 다음 문장에서도 똑같이 실패할 것이 확실해 측정을 멈춰야 하는 오류
 STOP_KINDS = SETUP_KINDS | {"quota_daily", "rate_limit"}
 
@@ -69,7 +70,7 @@ def classify_error(exc: Exception) -> str:
     if code == 401 or "invalid x-api-key" in low or "api key not valid" in low or "incorrect api key" in low:
         return "auth"
     # Gemini 무료 한도 초과 메시지에도 "billing"이라는 단어가 들어가므로 단어만으로 판단하지 않는다
-    if "credit balance" in low or "insufficient_quota" in low:
+    if code == 402 or "credit balance" in low or "insufficient_quota" in low:
         return "billing"
     if code == 403:
         return "permission"
@@ -180,12 +181,14 @@ class OpenAIClient:
         json_mode: bool = True,
         provider: str = "openai",
         http_client=None,
+        temperature: float | None = 0,
     ) -> None:
         import openai  # pip install openai
 
         self.model = model or os.environ.get("SUDOKU_LLM_MODEL", "gpt-4o-mini")
         self.name = f"{provider}:{self.model}"
         self.json_mode = json_mode
+        self.temperature = temperature
         self.last_meta: dict = {}
         kwargs: dict = {}
         if base_url:
@@ -198,12 +201,13 @@ class OpenAIClient:
 
     def complete(self, system: str, messages: list[dict]) -> str:
         extra = {"response_format": {"type": "json_object"}} if self.json_mode else {}
+        if self.temperature is not None:
+            extra["temperature"] = self.temperature
 
         def call() -> str:
             t0 = time.perf_counter()
             resp = self._client.chat.completions.create(
                 model=self.model,
-                temperature=0,
                 messages=[{"role": "system", "content": system}, *messages],
                 **extra,
             )
@@ -287,7 +291,7 @@ class GeminiNativeClient:
                  max_tokens: int | None = None, timeout: float = 120.0, transport=None) -> None:
         key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if not key:
-            raise LLMAPIError("auth", "GEMINI_API_KEY 환경변수가 없습니다. Google AI Studio에서 키를 만들어 설정하세요.")
+            raise LLMAPIError("config", "GEMINI_API_KEY 환경변수가 없습니다. Google AI Studio에서 키를 만들어 설정하세요.")
         self._key = key.strip()
         self.model = (model or os.environ.get("SUDOKU_LLM_MODEL", "gemini-3.8-flash")).removeprefix("models/")
         self.name = f"gemini:{self.model}"
@@ -365,7 +369,7 @@ def GeminiClient(model: str | None = None, http_client=None, *, via: str = "nati
     if via == "openai":
         key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if not key:
-            raise LLMAPIError("auth", "GEMINI_API_KEY 환경변수가 없습니다. Google AI Studio에서 키를 만들어 설정하세요.")
+            raise LLMAPIError("config", "GEMINI_API_KEY 환경변수가 없습니다. Google AI Studio에서 키를 만들어 설정하세요.")
         return OpenAIClient(
             model or os.environ.get("SUDOKU_LLM_MODEL", "gemini-3.8-flash"),
             base_url=GEMINI_BASE_URL, api_key=key, json_mode=False, provider="gemini-openai",
@@ -423,6 +427,99 @@ class Throttled:
             self._last = time.monotonic()
 
 
+FACTCHAT_BASE_URL = "https://factchat-cloud.mindlogic.ai/v1/gateway"
+
+
+class FactChatClient:
+    """숭실대 FactChat API Gateway (Mindlogic). 표준 라이브러리만 사용, 추가 설치 불필요.
+
+    공식 문서: https://docs.mindlogic.ai/docs/ssu/api-gateway/getting-started/overview
+      - OpenAI 호환 채팅: POST {base}/chat/completions/   (문서 표기대로 끝 슬래시 포함)
+      - 모델 목록: GET {base}/models/?type=llm, 잔여 크레딧: GET {base}/credits/
+      - 인증: Authorization: Bearer <키>  (키는 학교 사이트 > API Gateway에서 발급, 생성한 계정의 크레딧 차감)
+      - 제한: 회원당 60초 120회(초과 429), 크레딧 소진 402, 모델 미허용 403, 모델 없음 404
+
+    환경변수: FACTCHAT_API_KEY(필수), FACTCHAT_BASE_URL(선택, 기본은 위 주소), SUDOKU_LLM_MODEL(모델 ID)
+    temperature·response_format은 보내지 않는다(GPT-5 계열은 temperature=1만 허용, json_object는 문서에 없음).
+    응답의 billing.deducted_credit(실제 차감 크레딧)을 last_meta["credit"]에 남긴다.
+    """
+
+    def __init__(self, model: str | None = None, *, max_tokens: int | None = None,
+                 timeout: float = 180.0, transport=None, require_model: bool = True) -> None:
+        key = (os.environ.get("FACTCHAT_API_KEY") or "").strip()
+        if not key:
+            raise LLMAPIError("config", "FACTCHAT_API_KEY 환경변수를 설정하세요(학교 사이트 > API Gateway에서 발급).")
+        self._key = key
+        self.base = (os.environ.get("FACTCHAT_BASE_URL") or FACTCHAT_BASE_URL).rstrip("/")
+        self.model = model or os.environ.get("SUDOKU_LLM_MODEL") or ""
+        if require_model and not self.model:
+            raise LLMAPIError("config", "모델 ID를 지정하세요(--model 또는 SUDOKU_LLM_MODEL). "
+                                        "--list-models로 목록을 볼 수 있습니다.")
+        self.name = f"factchat:{self.model}"
+        self.max_tokens = max_tokens
+        self.timeout = timeout
+        self.last_meta: dict = {}
+        self._transport = transport or _urllib_transport
+
+    def _request(self, method: str, path: str, payload: dict | None = None) -> dict:
+        import json as _json
+
+        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json",
+                   # User-Agent가 비어 있으면 Cloudflare가 403(error code: 1010)으로 막는다
+                   "User-Agent": "sudoku-team-project-llm-parser/1.0"}
+        body = _json.dumps(payload).encode("utf-8") if payload is not None else None
+        status, raw = self._transport(method, f"{self.base}/{path}", headers, body, self.timeout)
+        text = raw.decode("utf-8", "replace")
+        try:
+            data = _json.loads(text or "{}")
+        except ValueError:
+            data = {}
+        if status >= 400:
+            err = data.get("error", data) if isinstance(data, dict) else {}
+            msg = err.get("message") if isinstance(err, dict) else None
+            msg = msg or (data.get("detail") if isinstance(data, dict) else None) or text[:200]
+            raise _HTTPStatusError(status, str(msg))
+        return data
+
+    def complete(self, system: str, messages: list[dict]) -> str:
+        payload: dict = {"model": self.model,
+                         "messages": [{"role": "system", "content": system}, *messages]}
+        if self.max_tokens:
+            payload["max_tokens"] = self.max_tokens
+
+        def call() -> str:
+            t0 = time.perf_counter()
+            data = self._request("POST", "chat/completions/", payload)
+            choice = (data.get("choices") or [{}])[0]
+            usage = data.get("usage") or {}
+            finish = choice.get("finish_reason")
+            self.last_meta = _meta(t0, usage.get("prompt_tokens"), usage.get("completion_tokens"), finish)
+            billing = data.get("billing") or {}
+            if billing.get("deducted_credit") is not None:
+                self.last_meta["credit"] = billing.get("deducted_credit")
+            msg = choice.get("message") or {}
+            if msg.get("refusal") or finish == "content_filter":
+                raise LLMAPIError("refusal", str(msg.get("refusal") or finish))
+            content = msg.get("content") or ""
+            if isinstance(content, list):  # 일부 모델은 파트 배열로 돌려준다
+                content = "".join(p.get("text", "") for p in content if isinstance(p, dict))
+            if finish == "length":
+                raise LLMAPIError("length", content[-200:])
+            if not content.strip():
+                raise LLMAPIError("empty", str(finish or ""))
+            return content
+
+        return call_with_retry(call, getattr(self, "max_retries", 5))
+
+    def list_models(self) -> list[str]:
+        data = self._request("GET", "models/?type=llm")
+        items = data.get("data", data.get("models", [])) if isinstance(data, dict) else data
+        return sorted(str(m.get("id", m.get("name", ""))) for m in items if isinstance(m, dict))
+
+    def credits(self) -> dict:
+        return self._request("GET", "credits/")
+
+
 def make_client(kind: str, model: str | None = None, max_tokens: int | None = None,
                 json_mode: bool = True) -> LLMClient:
     """max_tokens: 응답 길이 상한(Anthropic은 필수). json_mode=False면 풀이 과정 같은 자유 텍스트 허용."""
@@ -434,4 +531,7 @@ def make_client(kind: str, model: str | None = None, max_tokens: int | None = No
         return GeminiClient(model, json_mode=json_mode, max_tokens=max_tokens)
     if kind == "gemini-openai":
         return GeminiClient(model, via="openai")
-    raise ValueError(f"알 수 없는 클라이언트: {kind} (anthropic / openai / gemini / gemini-openai)")
+    if kind == "factchat":
+        return FactChatClient(model, max_tokens=max_tokens,
+                              require_model=model != "(목록 조회)")
+    raise ValueError(f"알 수 없는 클라이언트: {kind} (anthropic / openai / gemini / gemini-openai / factchat)")
