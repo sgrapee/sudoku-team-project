@@ -8,10 +8,12 @@ from __future__ import annotations
 import random
 
 from sudoku_engine import (
-    Grid, KillerCage, Model, Parity, SolverConfig, Thermometer,
+    Grid, KillerCage, LocalSearchConfig, Model, Parity, SolverConfig, Thermometer,
     count_solutions, diagonal_constraints, solve,
 )
-from sudoku_engine.benchmark import DEFAULT_CONFIGS, format_table, generate_puzzle, run_configs
+from sudoku_engine.benchmark import (
+    DEFAULT_CONFIGS, format_table, generate_puzzle, run_configs, run_method_comparison,
+)
 from sudoku_engine.spec import load_spec, spec_to_model_or_reason, validate_spec
 from sudoku_engine.techniques import next_hint, rate_difficulty, solve_logically
 
@@ -138,6 +140,18 @@ def demo_benchmark() -> None:
     print("설정마다 푼 퍼즐이 다르면 중앙값 비교가 왜곡되므로 common_* 열로 비교할 것.")
 
 
+def demo_local_search() -> None:
+    line("7. 비교 기준선: 백트래킹 vs 지역 탐색(min-conflicts)")
+    rows = run_method_comparison(
+        [EASY, HARD], time_limit=2.0, trials=2,
+        bt_configs=[SolverConfig(var_order="mrv_degree", val_order="lcv", propagation="ac3")],
+        ls_configs=[LocalSearchConfig(init="row")],
+    )
+    print(format_table([{k: r[k] for k in ("method", "solved", "solve_rate", "avg_ms_fail_as_limit")} for r in rows]))
+    print("\n지역 탐색은 완전성이 없다: 못 푼 것이 '해 없음'을 뜻하지 않는다.")
+    print("전체 비교(변형 퍼즐·단서 수별)는 python compare_methods.py (README_engine.md §4-2).")
+
+
 if __name__ == "__main__":
     demo_classic()
     demo_variants()
@@ -145,4 +159,5 @@ if __name__ == "__main__":
     demo_techniques()
     demo_generator()
     demo_benchmark()
+    demo_local_search()
     print("\n완료.")
