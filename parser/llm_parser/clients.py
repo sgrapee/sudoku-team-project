@@ -439,16 +439,18 @@ class FactChatClient:
       - 인증: Authorization: Bearer <키>  (키는 학교 사이트 > API Gateway에서 발급, 생성한 계정의 크레딧 차감)
       - 제한: 회원당 60초 120회(초과 429), 크레딧 소진 402, 모델 미허용 403, 모델 없음 404
 
-    환경변수: FACTCHAT_API_KEY(필수), FACTCHAT_BASE_URL(선택, 기본은 위 주소), SUDOKU_LLM_MODEL(모델 ID)
+    키: api_key 인자(GUI 입력칸 등) → 없으면 환경변수 FACTCHAT_API_KEY.
+    환경변수: FACTCHAT_API_KEY, FACTCHAT_BASE_URL(선택, 기본은 위 주소), SUDOKU_LLM_MODEL(모델 ID)
     temperature·response_format은 보내지 않는다(GPT-5 계열은 temperature=1만 허용, json_object는 문서에 없음).
     응답의 billing.deducted_credit(실제 차감 크레딧)을 last_meta["credit"]에 남긴다.
     """
 
-    def __init__(self, model: str | None = None, *, max_tokens: int | None = None,
+    def __init__(self, model: str | None = None, *, api_key: str | None = None, max_tokens: int | None = None,
                  timeout: float = 180.0, transport=None, require_model: bool = True) -> None:
-        key = (os.environ.get("FACTCHAT_API_KEY") or "").strip()
+        key = (api_key or os.environ.get("FACTCHAT_API_KEY") or "").strip()
         if not key:
-            raise LLMAPIError("config", "FACTCHAT_API_KEY 환경변수를 설정하세요(학교 사이트 > API Gateway에서 발급).")
+            raise LLMAPIError("config", "FactChat API 키가 없습니다. 키를 입력하거나 FACTCHAT_API_KEY 환경변수를 "
+                                        "설정하세요(학교 사이트 > API Gateway에서 발급).")
         self._key = key
         self.base = (os.environ.get("FACTCHAT_BASE_URL") or FACTCHAT_BASE_URL).rstrip("/")
         self.model = model or os.environ.get("SUDOKU_LLM_MODEL") or ""
@@ -516,8 +518,36 @@ class FactChatClient:
         items = data.get("data", data.get("models", [])) if isinstance(data, dict) else data
         return sorted(str(m.get("id", m.get("name", ""))) for m in items if isinstance(m, dict))
 
+    def model_infos(self) -> list[dict]:
+        """[{"id", "vendor"}] — vendor는 owned_by(openai·claude·gemini 등)를 사람이 읽는 회사 이름으로 바꾼 것."""
+        data = self._request("GET", "models/?type=llm")
+        items = data.get("data", data.get("models", [])) if isinstance(data, dict) else data
+        infos = [{"id": str(m.get("id", m.get("name", ""))), "vendor": vendor_label(m.get("owned_by"), m.get("id"))}
+                 for m in items if isinstance(m, dict) and (m.get("id") or m.get("name"))]
+        return sorted(infos, key=lambda x: (x["vendor"], x["id"]))
+
     def credits(self) -> dict:
         return self._request("GET", "credits/")
+
+
+_VENDORS = {"openai": "OpenAI", "claude": "Anthropic", "anthropic": "Anthropic", "gemini": "Google",
+            "google": "Google", "meta": "Meta", "xai": "xAI", "grok": "xAI", "mistral": "Mistral",
+            "deepseek": "DeepSeek", "qwen": "Alibaba", "alibaba": "Alibaba", "perplexity": "Perplexity"}
+_PREFIXES = (("gpt", "OpenAI"), ("o1", "OpenAI"), ("o3", "OpenAI"), ("o4", "OpenAI"), ("claude", "Anthropic"),
+             ("gemini", "Google"), ("gemma", "Google"), ("llama", "Meta"), ("grok", "xAI"),
+             ("mistral", "Mistral"), ("deepseek", "DeepSeek"), ("qwen", "Alibaba"), ("sonar", "Perplexity"))
+
+
+def vendor_label(owned_by, model_id) -> str:
+    """모델 제공 회사 이름. owned_by가 없거나 처음 보는 값이면 모델 이름 앞부분으로 추정한다."""
+    key = str(owned_by or "").strip().lower()
+    if key in _VENDORS:
+        return _VENDORS[key]
+    mid = str(model_id or "").lower()
+    for prefix, name in _PREFIXES:
+        if mid.startswith(prefix):
+            return name
+    return str(owned_by) if owned_by else "기타"
 
 
 def make_client(kind: str, model: str | None = None, max_tokens: int | None = None,
