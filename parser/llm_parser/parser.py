@@ -38,6 +38,7 @@ class Attempt:
     input_tokens: int | None = None
     output_tokens: int | None = None
     stop_reason: str | None = None
+    credit: float | None = None   # FactChat 등에서 실제 차감된 크레딧(응답에 있을 때만)
 
 
 @dataclass
@@ -134,7 +135,8 @@ def parse_rules(
             stage, feedback = "api", str(exc)
             meta = getattr(client, "last_meta", {}) or {}
             attempts.append(Attempt(exc.detail or "", stage, feedback, time.perf_counter() - t0, exc.kind,
-                                    meta.get("input_tokens"), meta.get("output_tokens"), meta.get("stop_reason")))
+                                    meta.get("input_tokens"), meta.get("output_tokens"), meta.get("stop_reason"),
+                                    meta.get("credit")))
             if exc.kind in ("length", "empty"):
                 # 잘리거나 빈 응답은 짧게 다시 쓰라고 되먹여 재시도
                 history.append((exc.detail or "", feedback + " JSON 객체 하나만 짧게 출력하세요."))
@@ -156,7 +158,8 @@ def parse_rules(
 
         meta = getattr(client, "last_meta", {}) or {}
         attempts.append(Attempt(raw, stage, feedback, time.perf_counter() - t0, "",
-                                meta.get("input_tokens"), meta.get("output_tokens"), meta.get("stop_reason")))
+                                meta.get("input_tokens"), meta.get("output_tokens"), meta.get("stop_reason"),
+                                    meta.get("credit")))
         if not stage:
             final = {**spec, "givens": givens} if givens else spec
             status = "unsupported" if unsupported else "ok"

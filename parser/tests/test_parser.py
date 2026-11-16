@@ -12,7 +12,7 @@ from llm_parser import LLMAPIError, ScriptedClient, parse_rules, plausibility_pr
 from llm_parser.canonical import canonical_items
 from llm_parser.checks import OutputFormatError, extract_json
 from llm_parser.clients import call_with_retry, classify_error
-from llm_parser.evaluate import evaluate, load_dataset, main, noisy_client, oracle_client
+from llm_parser.evaluate import evaluate, gold_as_output, load_dataset, main, noisy_client, oracle_client
 from llm_parser.prompt import FEW_SHOTS, SYSTEM_PROMPT, build_messages, extract_rule_text, wrap_rule
 
 DEV = load_dataset("dev")
@@ -911,3 +911,104 @@ def test_partial_alldiff_spec_not_rejected_as_unsolvable():
     out = json.dumps({"constraints": [{"type": "alldiff", "cells": ["r1c1", "r2c2", "r3c3", "r4c5"]}]})
     r = parse_rules("x", ScriptedClient(lambda t, a: out), givens="." * 81, check_solvable=True, max_attempts=1)
     assert r.status == "ok", [a.feedback for a in r.attempts]
+
+
+# ============================================================ 숭실대 FactChat API Gateway
+def _fc_reply(content=GOOD, status=200, finish="stop", billing=None, error=None):
+    def transport(method, url, headers, body, timeout):
+        transport.calls.append((method, url, headers, json.loads(body) if body else None))
+        if error is not None:
+            return status, json.dumps(error).encode()
+        data = {"id": "x", "object": "chat.completion",
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": finish}],
+                "usage": {"prompt_tokens": 1800, "completion_tokens": 40, "total_tokens": 1840}}
+        if billing:
+            data["billing"] = billing
+        return status, json.dumps(data).encode()
+    transport.calls = []
+    return transport
+
+
+@pytest.fixture
+def fc_env(monkeypatch):
+    monkeypatch.setenv("FACTCHAT_API_KEY", "fc-test-key-not-real")
+    monkeypatch.delenv("FACTCHAT_BASE_URL", raising=False)
+    monkeypatch.delenv("SUDOKU_LLM_MODEL", raising=False)
+    return monkeypatch
+
+
+def test_factchat_request_shape_and_credit(fc_env):
+    t = _fc_reply(billing={"deducted_credit": 0.0123, "exchange_rate": 1400})
+    r = parse_rules("x", C.FactChatClient("gemini-3.5-flash", transport=t))
+    assert r.status == "ok" and r.attempts[0].credit == 0.0123 and r.attempts[0].input_tokens == 1800
+    method, url, headers, body = t.calls[0]
+    assert method == "POST" and url == "https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions/"
+    assert headers["Authorization"] == "Bearer fc-test-key-not-real" and headers["User-Agent"]
+    assert body["model"] == "gemini-3.5-flash" and body["messages"][0]["role"] == "system"
+    assert "temperature" not in body and "response_format" not in body
+
+
+@pytest.mark.parametrize("status, message, kind", [
+    (401, "Invalid API key", "auth"),
+    (402, "Credit balance exhausted", "billing"),
+    (403, "Model 'x' is not available through the Gateway API.", "permission"),
+    (404, "Model 'x' not found", "model"),
+])
+def test_factchat_errors(fc_env, status, message, kind):
+    t = _fc_reply(status=status, error={"error": {"message": message}})
+    r = parse_rules("x", C.FactChatClient("m", transport=t))
+    assert r.status == "api_error" and r.error["kind"] == kind and message.split()[0] in r.error["detail"]
+
+
+def test_factchat_rate_limit_retried(fc_env, monkeypatch):
+    monkeypatch.setattr(C.time, "sleep", lambda s: None)
+    ok = _fc_reply()
+    n = {"k": 0}
+
+    def t(*a):
+        n["k"] += 1
+        return (429, b'{"error": {"message": "Rate limit exceeded"}}') if n["k"] == 1 else ok(*a)
+
+    assert parse_rules("x", C.FactChatClient("m", transport=t)).status == "ok" and n["k"] == 2
+
+
+def test_factchat_config_errors(fc_env):
+    with pytest.raises(LLMAPIError) as e:
+        C.FactChatClient(None)
+    assert e.value.kind == "config"
+    fc_env.delenv("FACTCHAT_API_KEY")
+    with pytest.raises(LLMAPIError) as e:
+        C.FactChatClient("m")
+    assert e.value.kind == "config"
+
+
+def test_factchat_list_models_and_credits(fc_env):
+    def t(method, url, headers, body, timeout):
+        if "models" in url:
+            assert url.endswith("/models/?type=llm")
+            return 200, json.dumps({"object": "list", "data": [{"id": "gemini-3.5-flash"}, {"id": "claude-haiku-5-5"}]}).encode()
+        return 200, json.dumps({"balance": 1234.5}).encode()
+    c = C.FactChatClient(require_model=False, transport=t)
+    assert c.list_models() == ["claude-haiku-5-5", "gemini-3.5-flash"]
+    assert c.credits() == {"balance": 1234.5}
+
+
+def test_factchat_base_url_override(fc_env):
+    fc_env.setenv("FACTCHAT_BASE_URL", "http://127.0.0.1:9/v1/gateway/")
+    t = _fc_reply()
+    parse_rules("x", C.FactChatClient("m", transport=t))
+    assert t.calls[0][1] == "http://127.0.0.1:9/v1/gateway/chat/completions/"
+
+
+def test_factchat_credit_summed_in_evaluation(fc_env):
+    data = DEV[:3]
+    gold = {d["text"]: json.dumps(gold_as_output(d), ensure_ascii=False) for d in data}
+
+    def t(method, url, headers, body, timeout):
+        b = json.loads(body)
+        rt = [extract_rule_text(m["content"]) for m in b["messages"] if m["role"] == "user"]
+        rt = [x for x in rt if x is not None]
+        return _fc_reply(content=gold[rt[-1]], billing={"deducted_credit": 0.01})(method, url, headers, body, timeout)
+
+    _, s = evaluate(data, C.FactChatClient("m", transport=t))
+    assert s["exact"] == 1.0 and s["deducted_credit"] == 0.03
