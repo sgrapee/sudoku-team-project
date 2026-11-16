@@ -30,6 +30,16 @@ from sudoku_engine import Solver, SolverConfig, count_solutions, solve  # noqa: 
 from sudoku_engine.spec import SpecError, load_spec  # noqa: E402
 from sudoku_engine.techniques import next_hint, rate_difficulty  # noqa: E402
 
+# LLM(FactChat) 연동은 별도 모듈. parser 폴더가 없거나 불러오기에 실패해도 GUI의 나머지 기능은 그대로 동작한다.
+try:
+    from gui import llm_panel  # noqa: E402
+except ImportError:
+    try:
+        import llm_panel  # type: ignore  # noqa: E402  (python gui/app.py로 실행한 경우)
+    except ImportError as _llm_exc:
+        llm_panel = None
+        LLM_IMPORT_ERROR = str(_llm_exc)
+
 
 COLORS = {
     "bg": "#F4F7FB",
@@ -154,6 +164,16 @@ class SudokuDemoApp(tk.Tk):
         self.stats_var = tk.StringVar(value="풀이 후 탐색 통계가 표시됩니다.")
         self.status_var = tk.StringVar(value="준비 완료 · 보드를 클릭하고 숫자를 입력하세요.")
 
+        # LLM(FactChat) 연동 상태. 키는 메모리에만 두고 파일·로그에 남기지 않는다.
+        self.llm_key_var = tk.StringVar()
+        self.llm_model_var = tk.StringVar()
+        self.llm_status_var = tk.StringVar()
+        self.llm_model_lookup: dict[str, str] = {}
+        self.llm_connected_key: str | None = None
+        self.llm_payload: dict[str, Any] | None = None
+        self.llm_job: Any = None
+        self.llm_status_extra = ""
+
         self._configure_styles()
         self._build_header()
         self._build_content()
@@ -215,6 +235,7 @@ class SudokuDemoApp(tk.Tk):
             font=("Segoe UI", 9, "bold"), padx=13, pady=7,
         )
         badge.pack(side="right", padx=28)
+        self._build_llm_bar(header)
 
     def _build_content(self) -> None:
         shell = tk.Frame(self, bg=COLORS["bg"])
@@ -286,6 +307,14 @@ class SudokuDemoApp(tk.Tk):
         self._button(top_buttons, "빈 보드", self.new_blank, primary=False).pack(
             side="left", fill="x", expand=True, padx=(5, 0)
         )
+        if llm_panel is not None:
+            # 세 버튼이 패널 폭(약 360px)에 들어가도록 좌우 여백을 줄인다.
+            for button in top_buttons.winfo_children():
+                button.configure(padx=4)
+            self._button(top_buttons, "자연어 입력", self.open_llm_dialog, primary=False).pack(
+                side="left", fill="x", expand=True, padx=(6, 0)
+            )
+            top_buttons.winfo_children()[-1].configure(padx=4)
 
         tk.Label(
             inner, textvariable=self.title_var, bg=COLORS["panel"], fg=COLORS["ink"],
@@ -354,6 +383,185 @@ class SudokuDemoApp(tk.Tk):
         )
         status.pack(fill="x", side="bottom")
 
+    # ------------------------------------------------------------ LLM(FactChat) 연동
+
+    def _build_llm_bar(self, header: tk.Widget) -> None:
+        """헤더 가운데 빈 공간에 FactChat 키·모델·연결 상태를 둔다(오른쪽 패널 높이는 그대로)."""
+        bar = tk.Frame(header, bg=COLORS["panel"])
+        bar.pack(side="right", padx=(0, 4), pady=6)
+        if llm_panel is None:
+            tk.Label(
+                bar, text=f"LLM 연동을 불러오지 못했습니다: {globals().get('LLM_IMPORT_ERROR', '')}"[:80],
+                bg=COLORS["panel"], fg=COLORS["danger"], font=("Malgun Gothic", 8),
+            ).pack()
+            return
+        ttk.Style(self).configure("Llm.TCombobox", fieldbackground="#F8FAFC", background="#F8FAFC",
+                                  foreground=COLORS["ink"], bordercolor=COLORS["line"], padding=3)
+
+        row = tk.Frame(bar, bg=COLORS["panel"])
+        row.pack(anchor="e")
+        tk.Label(row, text="FactChat 키", bg=COLORS["panel"], fg=COLORS["muted"],
+                 font=("Malgun Gothic", 9)).pack(side="left", padx=(0, 5))
+        self.llm_key_entry = tk.Entry(
+            row, textvariable=self.llm_key_var, show="*", width=16, font=("Segoe UI", 10), bg="#F8FAFC",
+            relief="flat", highlightthickness=1, highlightbackground=COLORS["line"],
+            highlightcolor=COLORS["primary"],
+        )
+        self.llm_key_entry.pack(side="left", ipady=3)
+        default_label = llm_panel.model_label(llm_panel.DEFAULT_MODEL)
+        self.llm_model_lookup = {default_label: llm_panel.DEFAULT_MODEL}
+        self.llm_model_box = ttk.Combobox(
+            row, textvariable=self.llm_model_var, state="readonly", values=[default_label], width=24,
+            style="Llm.TCombobox", font=("Malgun Gothic", 9),
+        )
+        self.llm_model_box.pack(side="left", padx=(6, 6))
+        self.llm_model_var.set(default_label)
+        self.llm_model_var.trace_add("write", lambda *_args: self._refresh_llm_status())
+        tk.Button(
+            row, text="연결 확인", command=self.connect_llm, bg="#F8FAFC", fg=COLORS["ink"],
+            activebackground=COLORS["selected"], relief="flat", cursor="hand2",
+            font=("Malgun Gothic", 9, "bold"), padx=8, pady=2,
+            highlightthickness=1, highlightbackground=COLORS["line"],
+        ).pack(side="left")
+
+        status_row = tk.Frame(bar, bg=COLORS["panel"])
+        status_row.pack(fill="x", pady=(3, 0))
+        self.llm_spec_button = tk.Button(
+            status_row, text="명세 보기", command=self.show_llm_spec, bg=COLORS["panel"],
+            fg=COLORS["primary_dark"], activebackground=COLORS["panel"], relief="flat", bd=0,
+            cursor="hand2", font=("Malgun Gothic", 8, "underline"), padx=2, pady=0, state="disabled",
+        )
+        self.llm_spec_button.pack(side="right")
+        self.llm_status_label = tk.Label(
+            status_row, textvariable=self.llm_status_var, bg=COLORS["panel"], fg=COLORS["muted"],
+            font=("Malgun Gothic", 8), anchor="w",
+        )
+        self.llm_status_label.pack(side="left", fill="x", expand=True)
+        self.llm_key_var.trace_add("write", lambda *_args: self._on_llm_key_change())
+        self._refresh_llm_status()
+
+    def _llm_key(self) -> str:
+        return self.llm_key_var.get().strip() or llm_panel.env_key()
+
+    def _llm_model(self) -> str:
+        return self.llm_model_lookup.get(self.llm_model_var.get(), llm_panel.DEFAULT_MODEL)
+
+    def _set_llm_status(self, text: str, color: str = "muted") -> None:
+        self.llm_status_var.set(text)
+        self.llm_status_label.configure(fg=COLORS.get(color, color))
+
+    def _refresh_llm_status(self, extra: str | None = None) -> None:
+        if extra is not None:
+            self.llm_status_extra = extra
+        extra = self.llm_status_extra
+        model = self.llm_model_var.get()
+        if self.llm_connected_key and self.llm_connected_key == self._llm_key():
+            self._set_llm_status(f"✔ 연결됨 · {model}" + (f" · {extra}" if extra else ""), "solved")
+        elif self.llm_key_var.get().strip():
+            self._set_llm_status("키 입력됨 · ‘연결 확인’으로 키와 모델 목록을 확인하세요")
+        elif llm_panel.env_key():
+            self._set_llm_status("환경변수 키(FACTCHAT_API_KEY) 사용 중 · ‘연결 확인’으로 모델 목록 보기")
+        else:
+            self._set_llm_status("API 키를 붙여넣고 ‘연결 확인’을 누르세요 (화면에는 *로 표시)")
+
+    def _on_llm_key_change(self) -> None:
+        if self.llm_connected_key is not None and self.llm_connected_key != self._llm_key():
+            self.llm_connected_key = None
+            self.llm_status_extra = ""
+        self._refresh_llm_status()
+
+    def connect_llm(self) -> None:
+        if self.llm_job is not None:
+            return
+        key = self._llm_key()
+        if not key:
+            self._set_llm_status("API 키를 먼저 입력하세요.", "danger")
+            return
+        self._set_llm_status("연결 확인 중… (키 확인 · 크레딧 · 모델 목록)", "primary_dark")
+        self.llm_job = llm_panel.Background(
+            self, lambda _progress: llm_panel.connect_job(key),
+            on_done=lambda data: self._connected(key, data), on_error=self._llm_connect_failed,
+        )
+
+    def _connected(self, key: str, data: dict[str, Any]) -> None:
+        self.llm_job = None
+        current = self._llm_model()
+        lookup = {llm_panel.model_label(m["id"], m["vendor"]): m["id"] for m in data["models"]}
+        if not lookup:
+            lookup = {llm_panel.model_label(llm_panel.DEFAULT_MODEL): llm_panel.DEFAULT_MODEL}
+        self.llm_model_lookup = lookup
+        self.llm_model_box.configure(values=list(lookup))
+        ids = list(lookup.values())
+        pick = current if current in ids else (llm_panel.DEFAULT_MODEL if llm_panel.DEFAULT_MODEL in ids else ids[0])
+        self.llm_model_var.set(next(label for label, mid in lookup.items() if mid == pick))
+        self.llm_connected_key = key
+        self._refresh_llm_status(llm_panel.credits_text(data["credits"], short=True))
+        self.status_var.set("FactChat 연결 확인 완료 · ‘자연어로 불러오기’로 퍼즐 설명을 LLM에 넘길 수 있습니다.")
+
+    def _llm_connect_failed(self, exc: Exception) -> None:
+        self.llm_job = None
+        self.llm_connected_key = None
+        message = llm_panel.friendly_error(exc)
+        self._set_llm_status(f"연결 실패 · {message}"[:60], "danger")
+        self.status_var.set(f"FactChat 연결 실패 · {message}")
+
+    def open_llm_dialog(self) -> None:
+        if llm_panel is None:
+            return
+        key = self._llm_key()
+        if not key:
+            self._set_llm_status("API 키를 먼저 입력하세요.", "danger")
+            self.llm_key_entry.focus_set()
+            return
+        for child in self.winfo_children():
+            if isinstance(child, llm_panel.NaturalLanguageDialog):
+                child.lift()
+                child.focus_set()
+                return
+        self._cancel_animation()
+        llm_panel.NaturalLanguageDialog(
+            self, key=key, model=self._llm_model(), model_text=self.llm_model_var.get(),
+            on_success=self.apply_llm_result, colors=COLORS,
+        )
+
+    def apply_llm_result(self, payload: dict[str, Any]) -> None:
+        result = payload["result"]
+        demo = payload.get("demo")
+        givens = payload.get("givens") or "." * 81
+        spec = {
+            "name": f"llm-{demo['id']}" if demo else "llm",
+            "title": f"LLM · {demo['id']}" if demo else "LLM 파싱 결과",
+            "note": "",
+            "rules_text": llm_panel.rules_only(payload["text"]) or "추가 규칙 없음",
+            "givens": givens,
+            "constraints": result.spec.get("constraints", []),
+        }
+        notes = [f"{payload['model']} · 호출 {result.n_attempts}회 · {payload['elapsed']:.1f}초"]
+        if payload.get("gold_match") is not None:
+            notes.append("정답 명세 일치 ✔" if payload["gold_match"] else "정답 명세와 다름 ✘")
+        if result.unsupported:
+            notes.append(f"미적용 규칙 {len(result.unsupported)}개")
+        spec["note"] = " · ".join(notes)
+        self.llm_payload = payload
+        self.llm_spec_button.configure(state="normal")
+        self._apply_spec(spec, "LLM이 만든 명세를 보드에 올렸습니다 · ‘과정 보며 풀기’로 백트래킹 탐색을 확인하세요.")
+        extra = ""
+        if payload.get("credits_after") is not None:
+            extra = llm_panel.credits_text(payload["credits_after"], short=True)
+            if payload.get("used") is not None:
+                extra += f" · 이번 파싱 {payload['used']:.1f}"
+        self._refresh_llm_status(extra)
+        if result.unsupported:
+            messagebox.showinfo(
+                "적용 안 된 규칙",
+                "엔진이 지원하지 않거나 정보가 부족해 적용하지 않은 규칙입니다:\n\n"
+                + "\n".join(f"· {u}" for u in result.unsupported),
+            )
+
+    def show_llm_spec(self) -> None:
+        if self.llm_payload is not None and llm_panel is not None:
+            llm_panel.SpecViewer(self, self.llm_payload, COLORS)
+
     def _section_label(self, parent: tk.Widget, text: str) -> None:
         tk.Label(
             parent, text=text, bg=COLORS["panel"], fg="#94A3B8",
@@ -400,6 +608,10 @@ class SudokuDemoApp(tk.Tk):
         spec = self.example_lookup.get(self.example_box.get())
         if spec is None:
             return
+        self._apply_spec(spec, "예제를 불러왔습니다 · 제약 도형을 확인한 뒤 힌트 또는 풀이를 눌러보세요.")
+
+    def _apply_spec(self, spec: dict[str, Any], status: str) -> None:
+        """명세(예제 파일 또는 LLM 파싱 결과)를 보드에 올린다."""
         self.current_spec = json.loads(json.dumps(spec, ensure_ascii=False))
         self.original_values = givens_to_values(spec.get("givens", ""))
         self.values = dict(self.original_values)
@@ -414,7 +626,7 @@ class SudokuDemoApp(tk.Tk):
         self.difficulty_var.set("분석 중…")
         self.unique_var.set("검증 중…")
         self.stats_var.set("풀이 후 탐색 통계가 표시됩니다.")
-        self.status_var.set("예제를 불러왔습니다 · 제약 도형을 확인한 뒤 힌트 또는 풀이를 눌러보세요.")
+        self.status_var.set(status)
         self.draw_board()
         self.after(60, self._analyze_current)
 
@@ -688,7 +900,10 @@ class SudokuDemoApp(tk.Tk):
             self.draw_board()
 
     def _on_key(self, event: tk.Event) -> None:
-        if event.char in "123456789":
+        # API 키 입력칸 등에서 친 글자가 보드에 들어가지 않게 한다.
+        if isinstance(event.widget, (tk.Entry, ttk.Entry, tk.Text)):
+            return
+        if event.char and event.char in "123456789":
             self.enter_value(int(event.char))
             return
         if event.keysym in ("BackSpace", "Delete", "0"):
@@ -890,7 +1105,14 @@ def smoke_test() -> int:
         if solve(model, SolverConfig(time_limit=5.0)).solved:
             solved += 1
     print(f"GUI smoke test OK: 예제 {len(examples)}개 로드, {solved}개 풀이 성공")
-    return 0 if solved == len(examples) else 1
+    if llm_panel is None:
+        print(f"LLM 연동 불러오기 실패: {globals().get('LLM_IMPORT_ERROR', '')}")
+        return 1
+    demos = llm_panel.load_demo_texts()
+    from llm_parser.checks import extract_givens
+    found = sum(extract_givens(d["text"]) is not None for d in demos)
+    print(f"LLM 연동 OK: 시연용 문장 {len(demos)}개, 단서 격자 추출 {found}/{len(demos)}")
+    return 0 if solved == len(examples) and found == len(demos) else 1
 
 
 def main() -> int:

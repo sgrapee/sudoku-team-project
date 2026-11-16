@@ -993,6 +993,28 @@ def test_factchat_list_models_and_credits(fc_env):
     assert c.credits() == {"balance": 1234.5}
 
 
+def test_factchat_api_key_argument_overrides_env(fc_env):
+    """GUI 입력칸 키: 인자로 준 키가 환경변수보다 우선하고, 환경변수가 없어도 동작한다."""
+    t = _fc_reply()
+    parse_rules("x", C.FactChatClient("m", api_key="  typed-key  ", transport=t))
+    assert t.calls[0][2]["Authorization"] == "Bearer typed-key"
+    fc_env.delenv("FACTCHAT_API_KEY")
+    t2 = _fc_reply()
+    parse_rules("x", C.FactChatClient("m", api_key="only-arg", transport=t2))
+    assert t2.calls[0][2]["Authorization"] == "Bearer only-arg"
+
+
+def test_factchat_model_infos_vendor(fc_env):
+    data = {"object": "list", "data": [
+        {"id": "gemini-3.5-flash", "owned_by": "gemini"}, {"id": "claude-haiku-5-5", "owned_by": "claude"},
+        {"id": "gpt-6-luna", "owned_by": "openai"}, {"id": "llama-9", "owned_by": "somecorp"},
+        {"id": "grok-5"}]}
+    c = C.FactChatClient(require_model=False, transport=lambda *a: (200, json.dumps(data).encode()))
+    vendors = {m["id"]: m["vendor"] for m in c.model_infos()}
+    assert vendors == {"gemini-3.5-flash": "Google", "claude-haiku-5-5": "Anthropic", "gpt-6-luna": "OpenAI",
+                       "llama-9": "Meta", "grok-5": "xAI"}
+
+
 def test_factchat_base_url_override(fc_env):
     fc_env.setenv("FACTCHAT_BASE_URL", "http://127.0.0.1:9/v1/gateway/")
     t = _fc_reply()
