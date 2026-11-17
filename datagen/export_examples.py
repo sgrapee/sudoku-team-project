@@ -19,7 +19,7 @@ import argparse
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from common import PUZZLES_DIR, ROOT, fmt_cell, fmt_cells, read_jsonl
 
 # (변형, 구간). 구간은 쉬움·보통·추측 필요가 섞이도록 돌려 가며 고른다. 각 파일의 첫 퍼즐을 쓴다.
 PICKS = [("diagonal", "easy"), ("thermo", "medium"), ("arrow", "expert"),
@@ -31,14 +31,6 @@ TITLES = {"diagonal": "대각선", "thermo": "온도계", "arrow": "화살표",
 DIAGONAL_RULE = "두 대각선(r1c1→r9c9, r1c9→r9c1)에도 1부터 9까지가 한 번씩만 들어간다."
 
 
-def rc(cell: list[int]) -> str:
-    return f"r{cell[0] + 1}c{cell[1] + 1}"
-
-
-def rcs(cells: list[list[int]]) -> str:
-    return ", ".join(rc(c) for c in cells)
-
-
 def convert(con: dict) -> tuple[dict, str]:
     """데이터셋 제약 하나 → (examples 형식 제약, 규칙 문장)."""
     t = con["type"]
@@ -46,15 +38,17 @@ def convert(con: dict) -> tuple[dict, str]:
         return {"type": "diagonal"}, DIAGONAL_RULE
     if t == "thermo":
         bulb, *rest = con["path"]
-        return ({"type": "thermo", "path": [rc(c) for c in con["path"]]},
-                f"온도계는 {rc(bulb)}(전구)에서 시작해 {rcs(rest)} 순서로 이어지며, "
+        return ({"type": "thermo", "path": [fmt_cell(c) for c in con["path"]]},
+                f"온도계는 {fmt_cell(bulb)}(전구)에서 시작해 {fmt_cells(rest)} 순서로 이어지며, "
                 f"전구에서 멀어질수록 숫자가 커진다.")
     if t == "arrow":
-        return ({"type": "arrow", "circle": rc(con["circle"]), "path": [rc(c) for c in con["path"]]},
-                f"{rc(con['circle'])}의 원 안 숫자는 화살표가 지나는 {rcs(con['path'])}의 합과 같다.")
+        return ({"type": "arrow", "circle": fmt_cell(con["circle"]),
+                 "path": [fmt_cell(c) for c in con["path"]]},
+                f"{fmt_cell(con['circle'])}의 원 안 숫자는 화살표가 지나는 "
+                f"{fmt_cells(con['path'])}의 합과 같다.")
     if t == "killer":
-        return ({"type": "killer", "cells": [rc(c) for c in con["cells"]], "sum": con["sum"]},
-                f"킬러 케이지 {rcs(con['cells'])}의 합은 {con['sum']}이고, 케이지 안에는 같은 숫자가 없다.")
+        return ({"type": "killer", "cells": [fmt_cell(c) for c in con["cells"]], "sum": con["sum"]},
+                f"킬러 케이지 {fmt_cells(con['cells'])}의 합은 {con['sum']}이고, 케이지 안에는 같은 숫자가 없다.")
     raise ValueError(f"내보낼 수 없는 제약 종류: {t}")
 
 
@@ -80,8 +74,7 @@ def main() -> None:
     args = ap.parse_args()
 
     for i, (variant, tier) in enumerate(PICKS):
-        path = ROOT / "puzzles" / f"{variant}_{tier}.jsonl"
-        rec = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
+        rec = read_jsonl(PUZZLES_DIR / f"{variant}_{tier}.jsonl")[0]
         ex = to_example(rec, FIRST_NUMBER + i)
         out = args.out_dir / f"{ex['name']}.json"
         out.write_text(json.dumps(ex, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

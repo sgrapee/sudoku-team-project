@@ -1,4 +1,4 @@
-"""④-A ③ 지원용 자연어 문제 설명 + 정답 명세 (A6).
+"""③ 지원용 자연어 문제 설명 + 정답 명세.
 
 puzzles/{variant}_{tier}.jsonl에서 퍼즐을 골라, 사람이 쓴 것 같은 한국어 문제 설명(text)과
 정답 spec 쌍을 만든다. ③은 text를 LLM 파서에 넣고, 출력 JSON을 spec과 비교해 정확도를 잰다.
@@ -19,12 +19,11 @@ python datagen/nl_prompts.py                 # → puzzles/nl_prompts.jsonl
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from common import PUZZLES_DIR, fmt_cell, fmt_cells, read_jsonl, write_jsonl
 
 # 변형별로 뽑을 개수 (규칙이 단순한 classic은 적게)
 PICK = {"classic": 4, "diagonal": 6, "thermo": 10, "arrow": 10, "mixed": 10}
@@ -57,19 +56,6 @@ ARROW_RULES = (
     "{circle}에 원이 있고, 거기서 나온 화살표가 지나가는 칸은 {path}입니다. 화살표 위 숫자를 더하면 원 안의 숫자가 됩니다.",
     "{path} 칸의 합 = {circle} 칸의 숫자 (화살표 규칙).",
 )
-
-
-def fmt_cell(cell: list[int], style: str) -> str:
-    r, c = cell[0] + 1, cell[1] + 1
-    if style == "rc":
-        return f"r{r}c{c}"
-    if style == "korean":
-        return f"{r}행 {c}열"
-    return f"({r}, {c})"
-
-
-def fmt_cells(cells: list[list[int]], style: str, sep: str = ", ") -> str:
-    return sep.join(fmt_cell(c, style) for c in cells)
 
 
 def fmt_grid(givens: str, style: str) -> str:
@@ -109,8 +95,8 @@ def describe(rec: dict, coord: str, grid_style: str, phrasing: int) -> str:
 
 def load_puzzles(variant: str) -> list[dict]:
     recs = []
-    for path in sorted((ROOT / "puzzles").glob(f"{variant}_*.jsonl")):
-        recs += [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    for path in sorted(PUZZLES_DIR.glob(f"{variant}_*.jsonl")):
+        recs += read_jsonl(path)
     return recs
 
 
@@ -155,13 +141,10 @@ def build(seed: int = 0) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser(description="③ 파서 평가용 자연어 문제 + 정답 spec 생성")
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--out", type=Path, default=ROOT / "puzzles" / "nl_prompts.jsonl")
+    ap.add_argument("--out", type=Path, default=PUZZLES_DIR / "nl_prompts.jsonl")
     args = ap.parse_args()
     items = build(args.seed)
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("w", encoding="utf-8") as f:
-        for it in items:
-            f.write(json.dumps(it, ensure_ascii=False) + "\n")
+    write_jsonl(args.out, items)
     print(f"{len(items)}개 → {args.out}", file=sys.stderr)
 
 

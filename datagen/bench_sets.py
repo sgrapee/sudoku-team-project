@@ -24,19 +24,15 @@ python datagen/bench_sets.py --out-dir /tmp/bench  # 다른 곳에 만들기 (�
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import statistics
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "engine"))
+from common import PUZZLES_DIR, read_jsonl, write_jsonl  # 엔진 import 경로 설정 포함 — sudoku_engine보다 먼저
+from sudoku_engine import Solver, SolverConfig
+from sudoku_engine.spec import SpecError, load_spec, validate_spec
 
-from sudoku_engine import Solver, SolverConfig  # noqa: E402
-from sudoku_engine.spec import SpecError, load_spec, validate_spec  # noqa: E402
-
-PUZZLES = ROOT / "puzzles"
 CLASSIC_TIERS = ("easy", "medium", "hard", "expert")
 VARIANTS = ("diagonal", "thermo", "arrow", "killer", "mixed")
 VARIANT_TIERS = ("easy", "medium", "expert")
@@ -44,16 +40,6 @@ VARIANT_PER_TIER = 10
 SPECIAL_PER_TIER = 3   # unsat·multi 각각, 클래식 구간마다
 COUNT_LIMIT = 20       # multi의 해를 이 개수까지 센다
 TIME_LIMIT = 30.0      # 풀이 한 번의 제한 시간(초)
-
-
-def read_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
-            if line.strip()]
-
-
-def write_jsonl(path: Path, records: list[dict]) -> None:
-    path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records),
-                    encoding="utf-8")
 
 
 def rc(i: int) -> list[int]:
@@ -128,11 +114,11 @@ def make_multi(rec: dict) -> dict:
 
 def build(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    classic = {t: read_jsonl(PUZZLES / f"classic_{t}.jsonl") for t in CLASSIC_TIERS}
+    classic = {t: read_jsonl(PUZZLES_DIR / f"classic_{t}.jsonl") for t in CLASSIC_TIERS}
     write_jsonl(out_dir / "classic.jsonl", [r for t in CLASSIC_TIERS for r in classic[t]])
     write_jsonl(out_dir / "variant.jsonl", [
         r for v in VARIANTS for t in VARIANT_TIERS
-        for r in read_jsonl(PUZZLES / f"{v}_{t}.jsonl")[:VARIANT_PER_TIER]])
+        for r in read_jsonl(PUZZLES_DIR / f"{v}_{t}.jsonl")[:VARIANT_PER_TIER]])
     # 구간마다 앞 3개는 unsat, 그다음 3개는 multi의 원본으로 쓴다 (원본이 겹치지 않게)
     n = SPECIAL_PER_TIER
     write_jsonl(out_dir / "unsat.jsonl",
@@ -144,7 +130,7 @@ def build(out_dir: Path) -> None:
 # ------------------------------------------------------------------ 검증
 
 def check(out_dir: Path) -> int:
-    sources = {r["id"]: r for p in PUZZLES.glob("*_*.jsonl") if p.stem != "nl_prompts"
+    sources = {r["id"]: r for p in PUZZLES_DIR.glob("*_*.jsonl") if p.stem != "nl_prompts"
                for r in read_jsonl(p)}
     files = {name: read_jsonl(out_dir / f"{name}.jsonl")
              for name in ("classic", "variant", "unsat", "multi")}
@@ -217,7 +203,7 @@ def check(out_dir: Path) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="로컬서치 vs 백트래킹 비교용 퍼즐 세트")
-    ap.add_argument("--out-dir", type=Path, default=PUZZLES / "bench")
+    ap.add_argument("--out-dir", type=Path, default=PUZZLES_DIR / "bench")
     ap.add_argument("--check", action="store_true", help="만들지 않고 검증만")
     args = ap.parse_args()
     if not args.check:

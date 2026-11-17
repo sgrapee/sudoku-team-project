@@ -7,14 +7,11 @@
 - best_violation은 엔진 local_search.violation의 정도(graded) 합계라 변형마다 단위가 다르다(킬러는 합 차이가 더해진다)
 """
 import csv
-import os
-import sys
 from multiprocessing import Pool
 
-from compare_bench import ROOT, tasks
-
-from sudoku_engine.local_search import LocalSearchConfig, solve_local_search  # noqa: E402
-from sudoku_engine.spec import load_spec  # noqa: E402
+from compare_bench import RESULTS_DIR, tasks  # common을 거쳐 엔진 import 경로가 설정된다
+from sudoku_engine.local_search import LocalSearchConfig, solve_local_search
+from sudoku_engine.spec import load_spec
 
 TL = 5.0
 
@@ -32,9 +29,8 @@ if __name__ == "__main__":
     ts = [t for t in tasks() if t[0] in ("classic", "variant")]
     with Pool(2) as p:
         rows = p.map(work, ts)
-    out = os.path.join(ROOT, "results", "compare")
-    os.makedirs(out, exist_ok=True)
-    with open(os.path.join(out, "ls_failures.csv"), "w", newline="") as f:
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(RESULTS_DIR / "ls_failures.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)
