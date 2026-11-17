@@ -30,7 +30,7 @@ def tasks():
     out = []
     sets = (
         ("classic", 10, lambda r: r["difficulty"]["tier"]),
-        ("variant", 3, lambda r: (r["variant"][0], r["difficulty"]["tier"])),
+        ("variant", 3, lambda r: ("+".join(r["variant"]), r["difficulty"]["tier"])),
         ("unsat", 99, lambda r: "-"),
         ("multi", 99, lambda r: "-"),
     )
