@@ -1,0 +1,9 @@
+﻿config,total_runs,category,count
+mrv_asc_fc,100,solved,100
+mrv_degree_asc_fc,100,solved,100
+mrv_degree_lcv_fc,100,solved,100
+mrv_lcv_fc,100,solved,100
+static_asc_fc,100,solved,99
+static_asc_fc,100,timeout,1
+static_lcv_fc,100,solved,98
+static_lcv_fc,100,timeout,2

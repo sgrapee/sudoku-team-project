@@ -1,0 +1,11 @@
+﻿config,total_runs,category,count
+mrv_asc_fc,375,solved,373
+mrv_asc_fc,375,timeout,2
+mrv_degree_asc_fc,375,solved,374
+mrv_degree_asc_fc,375,timeout,1
+mrv_degree_lcv_fc,375,solved,375
+mrv_lcv_fc,375,solved,375
+static_asc_fc,375,solved,335
+static_asc_fc,375,timeout,40
+static_lcv_fc,375,solved,339
+static_lcv_fc,375,timeout,36

@@ -35,9 +35,14 @@ python run_bench.py --experiment E1 --puzzles puzzles/bench/classic.jsonl
 python -m pip install matplotlib                 # 그래프에만 필요
 python plot_results.py results/E2_raw.csv        # -> results/figures/E2_raw_0{1,2,3}_*.png
 python analyze_failures.py results/E2_raw.csv    # -> results/failure_analysis/E2_raw_failure_{details,summary}.csv
+python datagen/difficulty_vs_cost.py results/E2_raw.csv  # E4 -> results/E2_raw_difficulty.{md,png}
 ```
 
-둘 다 `--out-dir`로 저장 위치를 바꿀 수 있다.
+앞의 둘은 `--out-dir`로 저장 위치를 바꿀 수 있다. `difficulty_vs_cost.py`는 CSV 옆에 저장하고, 여러 CSV를 한 번에 받는다. 데이터셋 레코드의 `difficulty.score`·`level`(엔진 `rate_difficulty` 값)과 `branch_nodes`의 스피어만 순위상관을 설정별로 계산하고, level별 분포를 그린다. 난이도가 없는 퍼즐(bench unsat·multi, .txt 입력)은 뺀다.
+
+E3(변형 제약 효과)는 `python datagen/variant_effect.py`로 돌린다. 변형 퍼즐 375개마다 같은 단서에서 변형 제약을 켰을 때와 껐을 때의 해 개수(1000개까지)와 첫 해까지의 탐색 비용을 재고, 혼합 퍼즐은 제약 종류를 하나씩 뺀 해 개수도 센다. 결과는 `results/E3_full/`(원시 CSV, `E3_summary.md`, 그래프 3장)에 저장하고, `--plot-only`로 그래프·표만 다시 만들 수 있다.
+
+백트래킹 vs 로컬서치 비교 결과와 그래프는 `results/compare/README.md`에 있다.
 
 `plot_results.py` 그래프:
 

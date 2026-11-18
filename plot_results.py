@@ -130,7 +130,7 @@ def make_plots(csv_path: Path, out_dir: Path) -> list[Path]:
     # Each tick also shows the solve rate, which the common subset hides.
     tick_labels = [f"{c}\nsolved {solved[c]}/{runs[c]}" for c in configs]
     positions = list(range(len(configs)))
-    width = max(8, len(configs) * 1.6)
+    width = max(8, len(configs) * 1.9)  # E1 6설정의 긴 이름(mrv_degree_lcv_fc)이 붙지 않게
 
     outputs: list[Path] = []
 
