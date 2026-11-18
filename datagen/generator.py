@@ -1,4 +1,4 @@
-"""④-A 퍼즐 생성기 — 클래식 (A1) + 난이도 구간 (A3) + 변형 (A2).
+"""퍼즐 생성기 — 클래식 + 난이도 구간 + 변형(대각선·온도계·화살표·혼합·킬러).
 
 완성판 생성 → (변형) 정답에서 제약 역산 → 유일해를 유지하며 칸 지우기 → 난이도 판정 → jsonl 레코드.
 
@@ -19,20 +19,18 @@ python datagen/generator.py --variant thermo --per-tier 25 --out-dir puzzles
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
+from common import dump_line  # 엔진 import 경로 설정 포함 — sudoku_engine보다 먼저
+from sudoku_engine import Grid, Model, Solver, SolverConfig, has_unique_solution
+from sudoku_engine.core import Cell
+from sudoku_engine.spec import load_spec
+from sudoku_engine.techniques import TECHNIQUE_TIER, rate_difficulty
 
-from sudoku_engine import Grid, Model, Solver, SolverConfig, has_unique_solution  # noqa: E402
-from sudoku_engine.core import Cell  # noqa: E402
-from sudoku_engine.spec import load_spec  # noqa: E402
-from sudoku_engine.techniques import TECHNIQUE_TIER, rate_difficulty  # noqa: E402
-
-# 난이도 구간 (A3).
+# 난이도 구간.
 # rate_difficulty의 level(= 풀이에 필요한 가장 어려운 기법의 등급)을 기준으로 나눈다.
 # score는 구간끼리 겹치므로 구간 안의 정렬에만 쓴다 (클래식 400개 샘플: L1 33~69, L2 52~81, L4 72~124).
 # level 6(엔진 기법만으로 못 풂)은 힌트를 끝까지 줄 수 없어 expert로 따로 둔다.
@@ -89,7 +87,7 @@ def tiers_for(variant: str) -> tuple[str, ...]:
     return TIERS if variant == "classic" else VARIANT_TIERS
 
 
-# ------------------------------------------------------------ 제약 역산 (A2)
+# ------------------------------------------------------------ 제약 역산
 def _adjacent(cell: Cell, grid: Grid, dirs: list[tuple[int, int]] = NEIGHBORS8) -> list[Cell]:
     r, c = cell
     return [(r + dr, c + dc) for dr, dc in dirs
@@ -186,6 +184,26 @@ def derive_cages(solution: dict[Cell, int], grid: Grid, rnd: random.Random,
     return out
 
 
+def base_constraints(parts: list[str]) -> list[dict]:
+    """정답과 무관하게 먼저 정해지는 제약. 완성판도 이 제약을 만족하도록 만든다."""
+    return [{"type": "diagonal"}] if "diagonal" in parts else []
+
+
+# 정답에서 역산하는 제약. 순서가 바뀌면 같은 seed에서 다른 퍼즐이 나온다.
+DERIVERS = (("thermo", derive_thermos), ("arrow", derive_arrows), ("killer", derive_cages))
+
+
+def derive_constraints(parts: list[str], solution: dict[Cell, int], grid: Grid,
+                       rnd: random.Random) -> list[dict]:
+    """parts에 든 종류의 제약을 정답에서 역산한다. 제약끼리 칸이 겹치지 않는다."""
+    used: set[Cell] = set()
+    derived: list[dict] = []
+    for name, derive in DERIVERS:
+        if name in parts:
+            derived += derive(solution, grid, rnd, used)
+    return derived
+
+
 # ------------------------------------------------------------------ 생성
 def complete_grid(grid: Grid, base_constraints: list[dict], seed: int) -> dict[Cell, int]:
     """base 제약(대각선 등)을 만족하는 무작위 완성판. 클래식이면 benchmark.random_complete_grid와 같다."""
@@ -242,16 +260,9 @@ def generate(variant: str, seed: int, target_givens: int | None = None,
     rnd = random.Random(seed)
     t0 = time.perf_counter()
 
-    base = [{"type": "diagonal"}] if "diagonal" in parts else []
+    base = base_constraints(parts)
     solution = complete_grid(grid, base, seed)
-    used: set[Cell] = set()
-    derived = []
-    if "thermo" in parts:
-        derived += derive_thermos(solution, grid, rnd, used)
-    if "arrow" in parts:
-        derived += derive_arrows(solution, grid, rnd, used)
-    if "killer" in parts:
-        derived += derive_cages(solution, grid, rnd, used)
+    derived = derive_constraints(parts, solution, grid, rnd)
 
     spec = {"givens": "", "constraints": base + derived}
     givens = dig(spec, solution, grid, target, seed, symmetric)
@@ -263,10 +274,6 @@ def generate(variant: str, seed: int, target_givens: int | None = None,
         "symmetric": symmetric,
         "gen_ms": round(gen_ms, 1),
     })
-
-
-def generate_classic(seed: int, target_givens: int = 24, symmetric: bool = False) -> dict:
-    return generate("classic", seed, target_givens, symmetric)
 
 
 def _finish_record(variant: str, parts: list[str], spec: dict, solution: str,
@@ -313,7 +320,7 @@ def run_count(args: argparse.Namespace) -> None:
     try:
         for seed in range(args.seed_start, args.seed_start + args.count):
             rec = generate(args.variant, seed, args.target_givens, args.symmetric)
-            out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            out.write(dump_line(rec))
             out.flush()
             _log(rec)
     finally:
@@ -339,7 +346,7 @@ def run_per_tier(args: argparse.Namespace) -> None:
             tier = rec["difficulty"]["tier"]
             if counts[tier] >= args.per_tier:
                 continue
-            files[tier].write(json.dumps(rec, ensure_ascii=False) + "\n")
+            files[tier].write(dump_line(rec))
             files[tier].flush()
             counts[tier] += 1
             _log(rec)

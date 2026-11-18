@@ -12,19 +12,15 @@
 """
 import collections
 import csv
-import json
-import os
-import sys
 from multiprocessing import Pool
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "engine"))
+from common import PUZZLES_DIR, ROOT, read_jsonl  # 엔진 import 경로 설정 포함 — sudoku_engine보다 먼저
+from sudoku_engine import SolverConfig
+from sudoku_engine.local_search import LocalSearchConfig, solve_local_search
+from sudoku_engine.solver import solve
+from sudoku_engine.spec import load_spec
 
-from sudoku_engine import SolverConfig  # noqa: E402
-from sudoku_engine.local_search import LocalSearchConfig, solve_local_search  # noqa: E402
-from sudoku_engine.solver import solve  # noqa: E402
-from sudoku_engine.spec import load_spec  # noqa: E402
-
+RESULTS_DIR = ROOT / "results" / "compare"
 TL, SEEDS = 5.0, 3
 BT = {"bt_mrv_degree_lcv_ac3": ("mrv_degree", "lcv", "ac3"), "bt_static_asc_none": ("static", "asc", "none")}
 
@@ -39,8 +35,7 @@ def tasks():
     )
     for name, per, key in sets:
         cnt = collections.Counter()
-        for ln in open(os.path.join(ROOT, "puzzles", "bench", f"{name}.jsonl"), encoding="utf-8"):
-            r = json.loads(ln)
+        for r in read_jsonl(PUZZLES_DIR / "bench" / f"{name}.jsonl"):
             k = key(r) if "difficulty" in r else "-"
             if cnt[k] >= per:
                 continue
@@ -73,9 +68,8 @@ if __name__ == "__main__":
     with Pool(2) as p:
         for rs in p.imap_unordered(work, ts):
             rows += rs
-    out = os.path.join(ROOT, "results", "compare")
-    os.makedirs(out, exist_ok=True)
-    with open(os.path.join(out, "runs.csv"), "w", newline="") as f:
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(RESULTS_DIR / "runs.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)

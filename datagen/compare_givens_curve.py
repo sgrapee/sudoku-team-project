@@ -6,17 +6,15 @@
 - 병렬 2개
 """
 import csv
-import os
-import sys
 from multiprocessing import Pool
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "engine"))
+from common import ROOT  # 엔진 import 경로 설정 포함 — sudoku_engine보다 먼저
+from sudoku_engine import Grid, Model, SolverConfig
+from sudoku_engine.benchmark import dig_puzzle, random_complete_grid
+from sudoku_engine.local_search import LocalSearchConfig, solve_local_search
+from sudoku_engine.solver import solve
 
-from sudoku_engine import Grid, Model, SolverConfig  # noqa: E402
-from sudoku_engine.benchmark import dig_puzzle, random_complete_grid  # noqa: E402
-from sudoku_engine.local_search import LocalSearchConfig, solve_local_search  # noqa: E402
-from sudoku_engine.solver import solve  # noqa: E402
+RESULTS_DIR = ROOT / "results" / "compare"
 
 G = Grid()
 TL, SEEDS, N = 5.0, 3, 8
@@ -45,9 +43,8 @@ if __name__ == "__main__":
     with Pool(2) as p:
         for rs in p.imap_unordered(work, ts):
             rows += rs
-    out = os.path.join(ROOT, "results", "compare")
-    os.makedirs(out, exist_ok=True)
-    with open(os.path.join(out, "givens_curve.csv"), "w", newline="") as f:
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(RESULTS_DIR / "givens_curve.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)

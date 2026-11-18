@@ -1,4 +1,4 @@
-"""④-A 데이터셋 검증 (A5).
+"""퍼즐 데이터셋 검증.
 
 puzzles/*.jsonl의 모든 퍼즐에 대해 확인한다.
   - 레코드 형식, 파일 이름({variant}_{tier})과 id·tier 일치, id 중복
@@ -21,12 +21,11 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from generator import VARIANTS, generate, tier_level, tier_of, tiers_for  # noqa: E402
-from sudoku_engine import Grid, has_unique_solution  # noqa: E402
-from sudoku_engine.spec import load_spec, validate_spec  # noqa: E402
-from sudoku_engine.techniques import rate_difficulty  # noqa: E402
+from common import PUZZLES_DIR  # 엔진 import 경로 설정 포함 — sudoku_engine보다 먼저
+from generator import VARIANTS, generate, tier_level, tier_of, tiers_for
+from sudoku_engine import Grid, has_unique_solution
+from sudoku_engine.spec import load_spec, validate_spec
+from sudoku_engine.techniques import rate_difficulty
 
 REQUIRED = {"id": str, "variant": list, "spec": dict, "solution": str, "givens": int,
             "difficulty": dict, "seed": int, "meta": dict}
@@ -76,13 +75,37 @@ def check_record(rec: dict, variant: str, tier: str, grid: Grid, regen: bool) ->
     return errs
 
 
+def check_file(path: Path, variant: str, tier: str, grid: Grid, seen: set[str],
+               regen: bool) -> tuple[int, int, Counter]:
+    """파일 하나를 검사해 (퍼즐 수, 실패한 퍼즐 수, 단서 수 분포)를 돌려준다. 실패는 바로 출력한다."""
+    n = bad = 0
+    givens: Counter = Counter()
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        n += 1
+        try:
+            rec = json.loads(line)
+            errs = check_record(rec, variant, tier, grid, regen)
+            if rec.get("id") in seen:
+                errs.append("id 중복")
+            seen.add(rec.get("id"))
+            givens[rec.get("givens")] += 1
+        except Exception as exc:  # noqa: BLE001 — 한 줄의 오류가 전체 검증을 멈추지 않게
+            errs = [f"예외: {exc!r}"]
+        if errs:
+            bad += 1
+            for e in errs:
+                print(f"[실패] {path.name}:{lineno} {e}")
+    return n, bad, givens
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="퍼즐 데이터셋 검증")
     ap.add_argument("files", nargs="*", type=Path)
     ap.add_argument("--regen", action="store_true", help="seed로 다시 생성해 비교 (느림)")
     args = ap.parse_args()
-    root = Path(__file__).resolve().parents[1]
-    files = args.files or sorted((root / "puzzles").glob("*.jsonl"))
+    files = args.files or sorted(PUZZLES_DIR.glob("*.jsonl"))
 
     grid = Grid()
     seen: set[str] = set()
@@ -93,25 +116,7 @@ def main() -> int:
         if variant not in VARIANTS or tier not in tiers_for(variant):
             print(f"[건너뜀] {path.name}: 파일 이름이 {{variant}}_{{tier}}.jsonl 형식이 아님")
             continue
-        n = bad = 0
-        givens = Counter()
-        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if not line.strip():
-                continue
-            n += 1
-            try:
-                rec = json.loads(line)
-                errs = check_record(rec, variant, tier, grid, args.regen)
-                if rec.get("id") in seen:
-                    errs.append("id 중복")
-                seen.add(rec.get("id"))
-                givens[rec.get("givens")] += 1
-            except Exception as exc:  # noqa: BLE001 — 한 줄의 오류가 전체 검증을 멈추지 않게
-                errs = [f"예외: {exc!r}"]
-            if errs:
-                bad += 1
-                for e in errs:
-                    print(f"[실패] {path.name}:{lineno} {e}")
+        n, bad, givens = check_file(path, variant, tier, grid, seen, args.regen)
         total += n
         total_err += bad
         g = sorted(givens)
