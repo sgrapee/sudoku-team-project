@@ -4,6 +4,9 @@
 
 - `run_bench.py`: 기존 Solver를 이용해 퍼즐×설정별 원시 측정값을 CSV로 저장
 - `analyze.py`: 공통으로 풀린 퍼즐 집합 기준 중앙값·IQR을 계산하고, SciPy가 있으면 Wilcoxon 검정을 출력
+- `plot_results.py`: 원시 CSV로 그래프 3장(PNG)을 만든다. matplotlib 필요
+- `analyze_failures.py`: 원시 CSV의 실패·특이 실행을 분류해 상세·요약 CSV로 저장
+- `tests/`: 위 두 스크립트의 테스트 (`python -m pytest -q tests`)
 - `results/E1_raw.csv`, `results/E2_raw.csv`: 소규모 예비 실행 원시 결과
 - `results/E1_summary.csv`, `results/E2_summary.csv`: 예비 실행 요약 결과
 
@@ -25,6 +28,47 @@ python run_bench.py --experiment E1 --puzzles puzzles/bench/classic.jsonl
 ```
 
 `--limit 3`은 입력 파일마다 최대 3개씩 읽는다는 뜻이다. `--puzzles`를 주지 않으면 기존처럼 `engine/puzzles_easy.txt`, `engine/puzzles_hard.txt`를 읽는다. 예비 실행은 빠른 점검용이며, 최종 실험에서는 `--limit`을 생략하고 충분한 시간 제한과 반복 측정을 협의한다.
+
+## 그래프·실패 분석
+
+```bash
+python -m pip install matplotlib                 # 그래프에만 필요
+python plot_results.py results/E2_raw.csv        # -> results/figures/E2_raw_0{1,2,3}_*.png
+python analyze_failures.py results/E2_raw.csv    # -> results/failure_analysis/E2_raw_failure_{details,summary}.csv
+```
+
+둘 다 `--out-dir`로 저장 위치를 바꿀 수 있다.
+
+`plot_results.py` 그래프:
+
+1. 설정별 branch_nodes 중앙값 (막대)
+2. 설정별 실행 시간 (박스플롯)
+3. 난이도 구간(tier, 없으면 단서 수)별 branch_nodes (점)
+
+- 1·2는 **모든 설정이 공통으로 푼 퍼즐**만 쓴다. `analyze.py`와 같은 기준이라 숫자가 `*_summary.csv`와 같다. 설정마다 자기가 푼 퍼즐로 계산하면 쉬운 퍼즐만 푼 설정이 유리해 보인다. 각 설정 이름 아래에 전체 해결 수(`solved k/n`)를 함께 적는다.
+- 공통으로 푼 퍼즐이 하나도 없으면(예: 어떤 설정이 하나도 못 풂) 그래프를 만들지 않고 설정별 성공 수를 보여 주며 멈춘다.
+- 3은 성공한 실행을 모두 쓴다. 점이 겹치지 않게 설정별로 옆으로 나누고 조금씩 흔들어(jitter, seed 고정) 찍는다.
+- y축은 symlog다. branch_nodes가 0부터 수만까지 퍼져 있어서 선형 축이면 none 말고는 막대가 보이지 않는다.
+
+`analyze_failures.py` 분류 (`failure_category`):
+
+| 분류 | 뜻 | 상세 CSV에 넣는지 |
+|---|---|---|
+| `solved` | 정상 해결 | 넣지 않음 |
+| `unsat_confirmed` | 해 없음 퍼즐(`expected_solutions=0`)에서 탐색을 끝까지 해 해가 없음을 확인 (정답) | 넣지 않음 |
+| `timeout` | 시간 또는 노드 제한 초과 | 넣음 |
+| `missed_solution` | 해가 있는 퍼즐인데 시간 초과 없이 탐색이 끝남 → 솔버 버그 의심 | 넣음 |
+| `not_solved_no_timeout` | 시간 초과 없이 못 풂, 기대 해 개수를 모름(.txt 입력) | 넣음 |
+| `multi_solution_case_single_solution_search` | 여러 해 퍼즐. `solve()`는 해 하나에서 멈추므로 해 개수는 확인하지 않음 | 넣음 |
+| `unexpected_solution_*`, `solved_count_not_comparable` | 기대 해 개수와 찾은 개수가 안 맞거나 비교할 수 없음 | 넣음 |
+
+엔진은 시간 제한과 `max_nodes` 초과를 모두 `timed_out=True`로 기록한다. 그래서 `solved=False`·`timed_out=False`는 탐색을 끝까지 했다는 뜻이다.
+
+두 스크립트 모두 `run_bench.py`의 원시 CSV만 받는다. 다음 경우에는 파일 경로와 줄 번호를 담은 오류를 내고 멈춘다.
+
+- 필수 열이 없는 CSV (예: `*_summary.csv`)
+- 열 개수가 헤더와 다른 행 (중간에 끊긴 파일)
+- 숫자가 아닌 `branch_nodes`·`elapsed_ms`·`givens` 값 (그래프 스크립트만 검사)
 
 ## 실험 설계
 
