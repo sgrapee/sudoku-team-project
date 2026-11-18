@@ -408,6 +408,19 @@ class SudokuDemoApp(tk.Tk):
             highlightcolor=COLORS["primary"],
         )
         self.llm_key_entry.pack(side="left", ipady=3)
+        # Windows/Tk 환경에 따라 기본 Ctrl+V가 상위 키 바인딩에 먹히는 경우가 있어
+        # API 키 입력칸에는 붙여넣기를 명시적으로 연결한다.
+        for sequence in ("<Control-v>", "<Control-V>", "<Shift-Insert>", "<<Paste>>"):
+            self.llm_key_entry.bind(sequence, self._paste_llm_key)
+        self.llm_key_entry.bind("<Button-3>", self._show_llm_key_menu)
+        self.llm_key_menu = tk.Menu(self, tearoff=False, font=("Malgun Gothic", 9))
+        self.llm_key_menu.add_command(label="붙여넣기", command=self._paste_llm_key)
+        self.llm_key_menu.add_command(label="키 지우기", command=self._clear_llm_key)
+        tk.Button(
+            row, text="붙여넣기", command=self._paste_llm_key, bg="#EEF2FF", fg=COLORS["primary_dark"],
+            activebackground=COLORS["selected"], relief="flat", cursor="hand2",
+            font=("Malgun Gothic", 8, "bold"), padx=5, pady=2,
+        ).pack(side="left", padx=(4, 0))
         default_label = llm_panel.model_label(llm_panel.DEFAULT_MODEL)
         self.llm_model_lookup = {default_label: llm_panel.DEFAULT_MODEL}
         self.llm_model_box = ttk.Combobox(
@@ -439,6 +452,33 @@ class SudokuDemoApp(tk.Tk):
         self.llm_status_label.pack(side="left", fill="x", expand=True)
         self.llm_key_var.trace_add("write", lambda *_args: self._on_llm_key_change())
         self._refresh_llm_status()
+
+    def _paste_llm_key(self, _event: tk.Event | None = None) -> str:
+        """클립보드의 API 키를 메모리에만 넣는다. 키 값은 로그에 출력하지 않는다."""
+        try:
+            value = self.clipboard_get().strip()
+        except tk.TclError:
+            self._set_llm_status("클립보드에 붙여넣을 텍스트가 없습니다.", "danger")
+            return "break"
+        if not value:
+            self._set_llm_status("클립보드가 비어 있습니다.", "danger")
+            return "break"
+        self.llm_key_var.set(value)
+        self.llm_key_entry.focus_set()
+        self.llm_key_entry.icursor("end")
+        self._set_llm_status("API 키를 붙여넣었습니다 · ‘연결 확인’을 누르세요")
+        return "break"
+
+    def _clear_llm_key(self) -> None:
+        self.llm_key_var.set("")
+        self.llm_key_entry.focus_set()
+
+    def _show_llm_key_menu(self, event: tk.Event) -> str:
+        try:
+            self.llm_key_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.llm_key_menu.grab_release()
+        return "break"
 
     def _llm_key(self) -> str:
         return self.llm_key_var.get().strip() or llm_panel.env_key()
