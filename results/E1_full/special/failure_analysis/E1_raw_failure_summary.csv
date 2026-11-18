@@ -1,0 +1,14 @@
+﻿config,total_runs,category,count
+mrv_asc_fc,24,multi_solution_case_single_solution_search,12
+mrv_asc_fc,24,unsat_confirmed,12
+mrv_degree_asc_fc,24,multi_solution_case_single_solution_search,12
+mrv_degree_asc_fc,24,unsat_confirmed,12
+mrv_degree_lcv_fc,24,multi_solution_case_single_solution_search,12
+mrv_degree_lcv_fc,24,unsat_confirmed,12
+mrv_lcv_fc,24,multi_solution_case_single_solution_search,12
+mrv_lcv_fc,24,unsat_confirmed,12
+static_asc_fc,24,multi_solution_case_single_solution_search,11
+static_asc_fc,24,timeout,1
+static_asc_fc,24,unsat_confirmed,12
+static_lcv_fc,24,multi_solution_case_single_solution_search,12
+static_lcv_fc,24,unsat_confirmed,12

@@ -1,0 +1,4 @@
+﻿experiment,puzzle_id,config,var_order,val_order,propagation,solved,timed_out,solutions_found,nodes,branch_nodes,backtracks,assignments,elapsed_ms,source_file,variant,tier,givens,expected_solutions,failure_category
+E1,classic-0040,static_asc_fc,static,asc,fc,False,True,0,103059,43728,159644,159674,5000.094,classic_easy.jsonl,classic,easy,24,1,timeout
+E1,classic-0040,static_lcv_fc,static,lcv,fc,False,True,0,97771,41390,151236,151265,5000.103,classic_easy.jsonl,classic,easy,24,1,timeout
+E1,classic-0065,static_lcv_fc,static,lcv,fc,False,True,0,100374,48511,165453,165476,5029.735,classic_expert.jsonl,classic,expert,25,1,timeout

@@ -1,0 +1,5 @@
+﻿config,runs,solved,timeouts,common_puzzles,median_branch_nodes,q1_branch_nodes,q3_branch_nodes,iqr_branch_nodes,median_elapsed_ms,q1_elapsed_ms,q3_elapsed_ms,iqr_elapsed_ms
+mrv_asc_ac3,375,375,0,59,1.0,0.0,3.0,3.0,7.293,6.880000000000001,8.097000000000001,1.2170000000000005
+mrv_asc_fc,375,373,2,59,23.0,10.0,44.5,34.5,6.806,4.601,14.2945,9.6935
+mrv_asc_full,375,375,0,59,1.0,0.0,2.0,2.0,9.957,8.4225,14.122,5.6995000000000005
+mrv_asc_none,375,59,316,59,7536.0,4398.5,11374.0,6975.5,2311.579,1262.5819999999999,3456.438,2193.856

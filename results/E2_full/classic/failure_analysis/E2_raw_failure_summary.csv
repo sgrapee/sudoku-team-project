@@ -1,0 +1,6 @@
+﻿config,total_runs,category,count
+mrv_asc_ac3,100,solved,100
+mrv_asc_fc,100,solved,100
+mrv_asc_full,100,solved,100
+mrv_asc_none,100,solved,42
+mrv_asc_none,100,timeout,58

@@ -1,0 +1,10 @@
+﻿config,total_runs,category,count
+mrv_asc_ac3,24,multi_solution_case_single_solution_search,12
+mrv_asc_ac3,24,unsat_confirmed,12
+mrv_asc_fc,24,multi_solution_case_single_solution_search,12
+mrv_asc_fc,24,unsat_confirmed,12
+mrv_asc_full,24,multi_solution_case_single_solution_search,12
+mrv_asc_full,24,unsat_confirmed,12
+mrv_asc_none,24,multi_solution_case_single_solution_search,7
+mrv_asc_none,24,timeout,11
+mrv_asc_none,24,unsat_confirmed,6
