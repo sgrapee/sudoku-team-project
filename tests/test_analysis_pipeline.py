@@ -70,6 +70,27 @@ def test_failure_analysis_on_real_run_bench_output(raw_csv, tmp_path):
     assert not any(r["category"] == "missed_solution" for r in summary)
 
 
+def test_run_bench_configs_filter_runs_only_the_named_setting(tmp_path):
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "run_bench.py"), "--experiment", "E2", "--configs", "mrv_asc_ac3_pure",
+         "--limit", "2", "--time-limit", "2", "--output-dir", str(tmp_path),
+         "--puzzles", str(BENCH / "classic.jsonl")],
+        capture_output=True, text=True, cwd=ROOT)
+    assert proc.returncode == 0, proc.stderr
+    rows = read_csv(tmp_path / "E2_raw.csv")
+    assert [(r["config"], r["propagation"]) for r in rows] == [("mrv_asc_ac3_pure", "ac3_pure")] * 2
+
+
+def test_run_bench_unknown_config_is_a_usage_error(tmp_path):
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "run_bench.py"), "--experiment", "E2", "--configs", "mrv_asc_bogus",
+         "--limit", "1", "--output-dir", str(tmp_path)],
+        capture_output=True, text=True, cwd=ROOT)
+    assert proc.returncode == 2
+    assert "unknown --configs for E2: mrv_asc_bogus" in proc.stderr
+    assert "mrv_asc_ac3_pure" in proc.stderr  # lists what is available
+
+
 def test_plots_on_real_run_bench_output(raw_csv, tmp_path):
     proc = subprocess.run([sys.executable, str(ROOT / "plot_results.py"), str(raw_csv),
                            "--out-dir", str(tmp_path)], capture_output=True, text=True)

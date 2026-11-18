@@ -78,12 +78,12 @@ E3(변형 제약 효과)는 `python datagen/variant_effect.py`로 돌린다. 변
 ## 실험 설계
 
 - E1: 전파 수준을 FC로 고정하고 `static / mrv / mrv_degree` × `asc / lcv` 6개 설정을 비교한다.
-- E2: 변수·값 선택을 `mrv / asc`로 고정하고 현재 구현된 `none / fc / ac3 / full` 4개 단계를 비교한다.
+- E2: 변수·값 선택을 `mrv / asc`로 고정하고 `none / fc / ac3_pure / ac3 / full` 5개 단계를 비교한다.
 - 저장 열: puzzle_id, 설정, solved, timed_out, nodes, branch_nodes, backtracks, assignments, elapsed_ms 등. 입력 정보로 source_file, variant, tier, givens, expected_solutions(해 개수, txt 입력은 빈칸)도 남긴다.
 
 ## 반드시 공유할 구현상 한계
 
-현재 `sudoku_engine/propagation.py`의 `ac3()` 내부에서 `_hidden_singles_unit()`을 호출한다. 따라서 현재 `propagation="ac3"`는 **순수 AC-3가 아니라 Hidden Single 검사를 포함한 AC-3**다. 계획서의 E2에서 요구한 `순수 AC-3`와 `AC-3 + hidden single`을 구분하려면 ② 알고리즘 담당자가 코드를 분리하고 테스트해야 한다. 이번 예비 실행 결과를 순수 AC-3 결과라고 부르면 안 된다.
+`sudoku_engine/propagation.py`의 `propagation="ac3"`는 `ac3()` 안에서 `_hidden_singles_unit()`도 호출한다. 그래서 **`ac3`는 순수 AC-3가 아니라 Hidden Single 검사를 포함한 AC-3**다. 엔진 기본값과 기존 결과를 바꾸지 않으려고 `ac3`는 그대로 두고, 순수 AC-3는 `propagation="ac3_pure"`로 따로 추가했다(2026-11-18). 보고서에서는 `ac3`를 "AC-3 + hidden single", `ac3_pure`를 "순수 AC-3"로 쓴다.
 
 실행기는 `--puzzles`로 공통 데이터 형식인 `puzzles/*.jsonl`도 읽는다. jsonl 퍼즐은 `load_spec(spec)`으로 만들어서 변형 제약도 함께 들어간다. 레코드 형식과 비교용 세트(`puzzles/bench/`)는 `puzzles/README.md`에 있다.
 

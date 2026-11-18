@@ -132,8 +132,9 @@ def test_read_rows_allows_empty_givens(raw_row, make_raw_csv):
 
 # -------------------------------------------------------------- ordered_configs
 def test_ordered_configs_e2_follows_propagation_strength(raw_row):
-    rows = [raw_row(f"mrv_asc_{p}") for p in ("full", "ac3", "none", "fc")]
-    assert pr.ordered_configs(rows) == ["mrv_asc_none", "mrv_asc_fc", "mrv_asc_ac3", "mrv_asc_full"]
+    rows = [raw_row(f"mrv_asc_{p}", propagation=p) for p in ("full", "ac3", "none", "ac3_pure", "fc")]
+    assert pr.ordered_configs(rows) == ["mrv_asc_none", "mrv_asc_fc", "mrv_asc_ac3_pure",
+                                        "mrv_asc_ac3", "mrv_asc_full"]
 
 
 def test_ordered_configs_e1_matches_run_bench_order(raw_row):

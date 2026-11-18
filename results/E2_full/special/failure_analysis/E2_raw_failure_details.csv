@@ -53,3 +53,15 @@ E2,multi-classic-0015,mrv_asc_none,mrv,asc,none,True,False,1,1899,1898,16799,168
 E2,multi-classic-0015,mrv_asc_fc,mrv,asc,fc,True,False,1,99,12,47,104,4.263,multi.jsonl,classic,expert,24,20,multi_solution_case_single_solution_search
 E2,multi-classic-0015,mrv_asc_ac3,mrv,asc,ac3,True,False,1,58,5,0,57,6.897,multi.jsonl,classic,expert,24,20,multi_solution_case_single_solution_search
 E2,multi-classic-0015,mrv_asc_full,mrv,asc,full,True,False,1,58,4,0,57,16.049,multi.jsonl,classic,expert,24,20,multi_solution_case_single_solution_search
+E2,multi-classic-0016,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,59,8,0,58,2.5,multi.jsonl,classic,easy,23,20,multi_solution_case_single_solution_search
+E2,multi-classic-0018,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,295,80,315,372,14.584,multi.jsonl,classic,easy,24,2,multi_solution_case_single_solution_search
+E2,multi-classic-0022,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,73,10,20,78,3.105,multi.jsonl,classic,easy,23,3,multi_solution_case_single_solution_search
+E2,multi-classic-0014,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,60,13,3,61,2.684,multi.jsonl,classic,medium,23,20,multi_solution_case_single_solution_search
+E2,multi-classic-0017,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,59,8,1,59,2.37,multi.jsonl,classic,medium,23,20,multi_solution_case_single_solution_search
+E2,multi-classic-0023,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,63,14,11,69,3.252,multi.jsonl,classic,medium,23,11,multi_solution_case_single_solution_search
+E2,multi-classic-0020,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,66,14,15,72,3.045,multi.jsonl,classic,hard,24,20,multi_solution_case_single_solution_search
+E2,multi-classic-0029,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,283,87,308,364,13.832,multi.jsonl,classic,hard,25,20,multi_solution_case_single_solution_search
+E2,multi-classic-0046,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,137,28,104,160,6.091,multi.jsonl,classic,hard,25,12,multi_solution_case_single_solution_search
+E2,multi-classic-0009,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,69,18,22,78,3.313,multi.jsonl,classic,expert,25,20,multi_solution_case_single_solution_search
+E2,multi-classic-0012,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,108,8,56,113,5.038,multi.jsonl,classic,expert,24,19,multi_solution_case_single_solution_search
+E2,multi-classic-0015,mrv_asc_ac3_pure,mrv,asc,ac3_pure,True,False,1,64,12,12,69,2.835,multi.jsonl,classic,expert,24,20,multi_solution_case_single_solution_search

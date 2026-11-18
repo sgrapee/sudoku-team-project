@@ -24,7 +24,7 @@ TIER_ORDER = ("easy", "medium", "hard", "expert")
 # Logical order of run_bench.py settings; unknown values go last.
 VAR_ORDER = ("static", "mrv", "mrv_degree")
 VAL_ORDER = ("asc", "lcv")
-PROPAGATION_ORDER = ("none", "fc", "ac3", "full")
+PROPAGATION_ORDER = ("none", "fc", "ac3_pure", "ac3", "full")
 REQUIRED_COLUMNS = {"config", "puzzle_id", "solved", "timed_out", "branch_nodes", "elapsed_ms"}
 NUMERIC_COLUMNS = ("branch_nodes", "elapsed_ms")
 
