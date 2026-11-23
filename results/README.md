@@ -55,6 +55,15 @@ python datagen/variant_effect.py
 
 variant는 시간을 줄이려고 diagonal·thermo·arrow와 killer·mixed 두 묶음으로 나눠 돌린 뒤 CSV를 합쳤다. 한 번에 돌려도 결과 형식은 같다.
 
+지금 코드로 `--experiment E2`를 돌리면 `ac3_pure`까지 5설정이 한 번에 나온다(위 `E2_full/`은 4설정을 먼저 돌리고 `ac3_pure`를 나중에 덧붙인 것). 일부 설정만 돌리려면 `--configs`로 고른다.
+
+```bash
+# 예전 E2 4설정만
+python run_bench.py --experiment E2 --configs mrv_asc_none mrv_asc_fc mrv_asc_ac3 mrv_asc_full ...
+# ac3_pure만
+python run_bench.py --experiment E2 --configs mrv_asc_ac3_pure ...
+```
+
 ## 결과 요약
 
 분기 노드는 모든 설정이 공통으로 푼 퍼즐 기준 중앙값이다(`E*_summary.csv`).
@@ -63,4 +72,4 @@ variant는 시간을 줄이려고 diagonal·thermo·arrow와 killer·mixed 두 �
 - **E2 전파 강도**: 전파가 없으면 5초 안에 클래식 42/100, 변형 59/375만 푼다. 분기 노드는 클래식 none 7584 → fc 14 → ac3_pure 14 → ac3 1 → full 1, 변형 7536 → 23 → 9 → 1 → 1. 해 없음 12개는 fc·ac3_pure·ac3·full이 모두 증명하고 none은 6개만 증명한다.
 - **순수 AC-3와 hidden single 나눠 보기**: 클래식에서는 `ac3_pure`와 fc의 분기 노드가 퍼즐 100개 모두 같다. 이진 != 아크만 있으면 순수 AC-3가 MRV + FC보다 더 줄이지 못하고, `ac3`의 14 → 1은 전부 hidden single 덕분이다. 변형에서는 순수 AC-3만으로도 크게 준다(중앙값 fc → ac3_pure: 온도계 64 → 17, 화살표 115 → 18, 킬러 213 → 12, 혼합 37 → 12, 대각선 16 → 16). 변형 제약의 전파를 고정점까지 돌리기 때문이다. 그 뒤 hidden single이 1~2까지 줄인다.
 - **E3 변형 제약 효과**: 제약을 켜면 375개 모두 유일해, 끄면 93~100%가 해 1000개 이상이고 끈 상태의 첫 해가 원래 정답인 경우는 0개. 첫 해까지 분기 노드는 켰을 때 1, 껐을 때 16~29로 변형 제약이 탐색을 오히려 줄인다. 노드당 시간 비율(켬/끔)은 0.91~1.03. 혼합 퍼즐에서는 대각선을 빼면 유일해가 1/75만 남아 정보를 가장 많이 준다(화살표 6/75, 온도계 33/75). 숫자는 `E3_full/E3_summary.md`.
-- **E4 난이도 vs 탐색 비용**: 엔진 난이도 level과 분기 노드의 스피어만 ρ는 ac3 0.70~0.73, full 0.83, fc 0.20~0.23, none −0.02~0.15(E2 클래식·변형). 엔진 난이도는 전파가 있는 탐색의 비용을 잘 설명한다.
+- **E4 난이도 vs 탐색 비용**: 엔진 난이도 level과 분기 노드의 스피어만 ρ는 ac3 0.70~0.73, full 0.83, ac3_pure 0.20~0.25, fc 0.20~0.23, none −0.02~0.15(E2 클래식·변형). 엔진 난이도는 hidden single이 들어간 전파(ac3·full)의 탐색 비용을 잘 설명한다. 순수 AC-3는 fc와 비슷한 수준이라, 상관을 만드는 것은 hidden single이다(엔진 난이도 자체가 hidden single 같은 인간 기법으로 매겨진다).
