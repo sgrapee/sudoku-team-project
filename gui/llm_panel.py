@@ -289,7 +289,9 @@ class NaturalLanguageDialog(tk.Toplevel):
                                        fg=colors["primary_dark"], font=("Malgun Gothic", 10, "bold"), anchor="w",
                                        justify="left", wraplength=660)
         self.progress_label.pack(side="bottom", fill="x", pady=(6, 8))
-        tk.Label(body, text=f"모델: {model_text}  ·  파싱 1회에 약 16 크레딧 (gemini-3.5-flash 기준)",
+        # 실측(gemini-3.5-flash, 2026-11-25): 같은 짧은 클래식 설명이 9.9~15.0으로 호출마다 달랐고,
+        # 긴 expert 혼합 설명(nl-035)은 25.8, 평가 50개 평균은 16.6
+        tk.Label(body, text=f"모델: {model_text}  ·  파싱 1회에 약 10~26 크레딧, 설명이 길수록 많음 (gemini-3.5-flash 기준)",
                  bg=colors["panel"], fg=colors["muted"], font=("Malgun Gothic", 9), anchor="w").pack(
                      side="bottom", fill="x")
         self.info_var = tk.StringVar()

@@ -14,11 +14,12 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -133,7 +134,11 @@ class SudokuDemoApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Sudoku AI Studio · 변형 스도쿠 시연")
-        self.geometry("1120x720")
+        # 화면이 허락하면 오른쪽 정보 패널이 잘리지 않도록 세로를 키운다.
+        # 창을 화면 맨 위에 붙여, 제목 표시줄(약 31px)과 작업 표시줄(약 48px)에 가리지 않게 한다.
+        screen_w, screen_h = self.winfo_screenwidth(), self.winfo_screenheight()
+        height = max(680, min(820, screen_h - 90))
+        self.geometry(f"1120x{height}+{max(0, (screen_w - 1120) // 2)}+0")
         self.minsize(1040, 680)
         self.configure(bg=COLORS["bg"])
 
@@ -145,6 +150,7 @@ class SudokuDemoApp(tk.Tk):
         self.value_source: dict[tuple[int, int], str] = {}
         self.selected: tuple[int, int] | None = None
         self.hint_cells: set[tuple[int, int]] = set()
+        self.error_cells: set[tuple[int, int]] = set()  # 정답과 다른 사용자 입력(힌트 전 검사)
         self.trace_events: list[Any] = []
         self.trace_index = 0
         self.trace_total = 0
@@ -283,8 +289,9 @@ class SudokuDemoApp(tk.Tk):
         action_dock = tk.Frame(right, bg=COLORS["panel"])
         action_dock.pack(side="bottom", fill="x", padx=24, pady=(6, 16))
 
-        inner = tk.Frame(right, bg=COLORS["panel"])
-        inner.pack(side="top", fill="both", expand=True, padx=24, pady=(18, 4))
+        # 정보 영역은 화면이 낮으면 스크롤된다. 예전에는 넘치는 부분(난이도 칸 아래, 규칙 요약)이
+        # 말없이 잘려서 규칙 요약이 아예 보이지 않았다.
+        inner = self._build_scroll_area(right)
 
         self._section_label(inner, "DEMO PUZZLE")
         choices: list[str] = []
@@ -296,11 +303,11 @@ class SudokuDemoApp(tk.Tk):
             inner, state="readonly", values=choices, style="Demo.TCombobox",
             font=("Malgun Gothic", 10),
         )
-        self.example_box.pack(fill="x", pady=(7, 8))
+        self.example_box.pack(fill="x", pady=(6, 6))
         self.example_box.bind("<<ComboboxSelected>>", lambda _event: self.load_selected_example())
 
         top_buttons = tk.Frame(inner, bg=COLORS["panel"])
-        top_buttons.pack(fill="x", pady=(0, 18))
+        top_buttons.pack(fill="x", pady=(0, 12))
         self._button(top_buttons, "예제 불러오기", self.load_selected_example, primary=False).pack(
             side="left", fill="x", expand=True, padx=(0, 5)
         )
@@ -318,30 +325,30 @@ class SudokuDemoApp(tk.Tk):
 
         tk.Label(
             inner, textvariable=self.title_var, bg=COLORS["panel"], fg=COLORS["ink"],
-            font=("Malgun Gothic", 15, "bold"), anchor="w", wraplength=350, justify="left",
+            font=("Malgun Gothic", 15, "bold"), anchor="w", wraplength=335, justify="left",
         ).pack(fill="x")
         tk.Label(
             inner, textvariable=self.subtitle_var, bg=COLORS["panel"], fg=COLORS["muted"],
-            font=("Malgun Gothic", 9), anchor="w", wraplength=350, justify="left",
-        ).pack(fill="x", pady=(5, 14))
+            font=("Malgun Gothic", 9), anchor="w", wraplength=335, justify="left",
+        ).pack(fill="x", pady=(4, 10))
 
         meta = tk.Frame(inner, bg="#F8FAFC", highlightbackground="#E8EDF5", highlightthickness=1)
-        meta.pack(fill="x", pady=(0, 16))
+        meta.pack(fill="x", pady=(0, 8))
         self._meta_item(meta, "난이도", self.difficulty_var, 0)
         self._meta_item(meta, "유일해", self.unique_var, 1)
         self._meta_item(meta, "변형 제약", self.constraint_var, 2)
 
         self._section_label(inner, "RULE SUMMARY")
         self.rule_text = tk.Text(
-            inner, height=4, wrap="word", bg="#F8FAFC", fg="#475569",
+            inner, height=3, wrap="word", bg="#F8FAFC", fg="#475569",
             relief="flat", font=("Malgun Gothic", 9), padx=10, pady=9,
             selectbackground=COLORS["selected"],
         )
-        self.rule_text.pack(fill="x", pady=(7, 16))
+        self.rule_text.pack(fill="x", pady=(6, 8))
         self.rule_text.configure(state="disabled")
 
         action_row = tk.Frame(action_dock, bg=COLORS["panel"])
-        action_row.pack(fill="x", pady=(0, 9))
+        action_row.pack(fill="x", pady=(0, 7))
         self._button(action_row, "AI 힌트", self.show_hint, primary=False).pack(
             side="left", fill="x", expand=True, padx=(0, 5)
         )
@@ -350,7 +357,7 @@ class SudokuDemoApp(tk.Tk):
         )
 
         speed_row = tk.Frame(action_dock, bg=COLORS["panel"])
-        speed_row.pack(fill="x", pady=(0, 8))
+        speed_row.pack(fill="x", pady=(0, 6))
         tk.Label(
             speed_row, text="탐색 재생 속도", bg=COLORS["panel"], fg=COLORS["muted"],
             font=("Malgun Gothic", 9),
@@ -362,20 +369,30 @@ class SudokuDemoApp(tk.Tk):
         self.speed_box.pack(side="right")
 
         play_row = tk.Frame(action_dock, bg=COLORS["panel"])
-        play_row.pack(fill="x", pady=(0, 9))
+        play_row.pack(fill="x", pady=(0, 7))
         self._button(play_row, "과정 보며 풀기", self.solve_board, primary=True).pack(
             side="left", fill="x", expand=True, padx=(0, 5)
         )
         self.pause_button = self._button(play_row, "일시정지", self.toggle_pause, primary=False)
         self.pause_button.pack(side="left", padx=(5, 0))
-        self._button(action_dock, "처음 상태로 되돌리기", self.reset_board, primary=False).pack(fill="x")
+        reset_row = tk.Frame(action_dock, bg=COLORS["panel"])
+        reset_row.pack(fill="x")
+        self._button(reset_row, "처음 상태로 되돌리기", self.reset_board, primary=False).pack(
+            side="left", fill="x", expand=True, padx=(0, 5)
+        )
+        # 독립 검사기(independent_checker)가 읽는 sudoku-result-v1 형식으로 저장한다.
+        self._button(reset_row, "결과 JSON 저장", self.save_result_json, primary=False).pack(
+            side="left", fill="x", expand=True, padx=(5, 0)
+        )
 
-        stats = tk.Label(
+        # 통계 칸은 늘 두 줄 높이로 둔다. 한 줄 ↔ 두 줄로 바뀌면 위 정보 영역 높이가 흔들려
+        # 재생 중에 스크롤바가 생겼다 사라진다.
+        self.stats_label = tk.Label(
             action_dock, textvariable=self.stats_var, bg=COLORS["success_bg"], fg="#047857",
             font=("Malgun Gothic", 9), anchor="w", justify="left", wraplength=340,
-            padx=12, pady=10,
+            padx=12, pady=6, height=2,
         )
-        stats.pack(fill="x", pady=(16, 0))
+        self.stats_label.pack(fill="x", pady=(8, 0))
 
         status = tk.Label(
             self, textvariable=self.status_var, bg="#172033", fg="#E5E7EB",
@@ -575,6 +592,8 @@ class SudokuDemoApp(tk.Tk):
             "rules_text": llm_panel.rules_only(payload["text"]) or "추가 규칙 없음",
             "givens": givens,
             "constraints": result.spec.get("constraints", []),
+            # 결과 JSON에 함께 저장해, 독립 검사기가 '퍼즐 전체를 검사하지 못함'을 알 수 있게 한다.
+            "unsupported": list(result.unsupported or []),
         }
         notes = [f"{payload['model']} · 호출 {result.n_attempts}회 · {payload['elapsed']:.1f}초"]
         if payload.get("gold_match") is not None:
@@ -601,6 +620,51 @@ class SudokuDemoApp(tk.Tk):
     def show_llm_spec(self) -> None:
         if self.llm_payload is not None and llm_panel is not None:
             llm_panel.SpecViewer(self, self.llm_payload, COLORS)
+
+    def _build_scroll_area(self, parent: tk.Widget) -> tk.Frame:
+        """세로 스크롤되는 정보 영역을 만들고, 내용을 담을 Frame을 돌려준다.
+
+        내용이 영역보다 길 때만 스크롤바를 보이고 마우스 휠을 받는다.
+        """
+        holder = tk.Frame(parent, bg=COLORS["panel"])
+        holder.pack(side="top", fill="both", expand=True, pady=(14, 4))
+        canvas = tk.Canvas(holder, bg=COLORS["panel"], highlightthickness=0, bd=0)
+        scrollbar = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        inner = tk.Frame(canvas, bg=COLORS["panel"])
+        window = canvas.create_window((24, 0), window=inner, anchor="nw")
+        self.info_canvas = canvas
+        self.info_inner = inner
+        self.info_scrollbar = scrollbar
+
+        def refresh(_event: tk.Event | None = None) -> None:
+            # 내용 폭은 스크롤바 유무와 상관없이 고정한다(오른쪽 여백에 스크롤바 자리를 미리 둔다).
+            # 스크롤바가 생길 때 폭이 줄면 줄바꿈이 늘어 스크롤바가 사라지지 않는 순환이 생긴다.
+            total = holder.winfo_width()
+            if total > 1:
+                canvas.itemconfigure(window, width=max(total - 24 - 24, 100))
+            width = canvas.winfo_width()
+            needed = inner.winfo_reqheight()
+            canvas.configure(scrollregion=(0, 0, width, needed))
+            overflow = needed > canvas.winfo_height() > 1
+            if overflow and not scrollbar.winfo_ismapped():
+                scrollbar.pack(side="right", fill="y", before=canvas)
+            elif not overflow and scrollbar.winfo_ismapped():
+                scrollbar.pack_forget()
+                canvas.yview_moveto(0)
+
+        def on_wheel(event: tk.Event) -> None:
+            if scrollbar.winfo_ismapped():
+                canvas.yview_scroll(int(-event.delta / 120) or (-1 if event.delta > 0 else 1), "units")
+
+        canvas.bind("<Configure>", refresh)
+        inner.bind("<Configure>", refresh)
+        holder.bind("<Configure>", refresh, add="+")
+        # 휠은 포인터가 정보 영역 위에 있을 때만 받는다(콤보박스 목록 등 다른 곳과 겹치지 않게).
+        holder.bind("<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", on_wheel))
+        holder.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
+        return inner
 
     def _section_label(self, parent: tk.Widget, text: str) -> None:
         tk.Label(
@@ -658,6 +722,10 @@ class SudokuDemoApp(tk.Tk):
         self.value_source = {cell: "given" for cell in self.original_values}
         self.selected = None
         self.hint_cells.clear()
+        self.error_cells.clear()
+        self.solve_result = None
+        if hasattr(self, "info_canvas"):
+            self.info_canvas.yview_moveto(0)
 
         self.title_var.set(str(spec.get("title") or spec.get("name") or "변형 스도쿠"))
         self.subtitle_var.set(str(spec.get("note") or "변형 제약을 만족하도록 퍼즐을 풀어보세요."))
@@ -685,6 +753,8 @@ class SudokuDemoApp(tk.Tk):
         self.value_source = {}
         self.selected = (0, 0)
         self.hint_cells.clear()
+        self.error_cells.clear()
+        self.solve_result = None
         self.title_var.set("빈 클래식 스도쿠")
         self.subtitle_var.set("숫자를 입력해 새로운 문제를 구성하세요.")
         self._set_rule_text(self.current_spec["rules_text"])
@@ -700,6 +770,8 @@ class SudokuDemoApp(tk.Tk):
         self.values = dict(self.original_values)
         self.value_source = {cell: "given" for cell in self.original_values}
         self.hint_cells.clear()
+        self.error_cells.clear()
+        self.solve_result = None
         self.stats_var.set("풀이 후 탐색 통계가 표시됩니다.")
         self.status_var.set("퍼즐을 처음 상태로 되돌렸습니다.")
         self.draw_board()
@@ -775,11 +847,24 @@ class SudokuDemoApp(tk.Tk):
         self.animating = True
         self.paused = False
         self.pause_button.configure(text="일시정지")
+        shown = len(self.trace_events)
+        if shown == self.trace_total:
+            scope = f"전체 {self.trace_total}단계"
+        else:
+            # 아래 상태줄의 'x/650'과 헷갈리지 않게, 표본 재생이라는 사실을 처음부터 밝힌다.
+            scope = f"전체 {self.trace_total}단계 중 {shown}단계 표본"
         self.stats_var.set(
-            f"탐색 과정 재생 중 · 전체 {self.trace_total}단계\n"
+            f"탐색 과정 재생 중 · {scope}\n"
             "주황색은 임시 값이며 백트래킹 때 바뀔 수 있습니다."
         )
         self._animate_trace()
+
+    def _progress_text(self) -> str:
+        """상태줄의 재생 위치. 표본 재생이면 그 사실과 전체 단계 수를 함께 적는다."""
+        shown = len(self.trace_events)
+        if shown == self.trace_total:
+            return f"{self.trace_index}/{shown}"
+        return f"{self.trace_index}/{shown} (전체 {self.trace_total}단계 중 표본)"
 
     def _trim_trace(self, trace: list[Any], max_events: int) -> list[Any]:
         """발표가 지나치게 길어지지 않도록 긴 추적은 앞·중간·끝을 균등 표본화한다."""
@@ -825,9 +910,7 @@ class SudokuDemoApp(tk.Tk):
         cell_text = ""
         if event.cell is not None:
             cell_text = f" · r{event.cell[0] + 1}c{event.cell[1] + 1}={event.value}"
-        shown = self.trace_index
-        total = len(self.trace_events)
-        self.status_var.set(f"탐색 {shown}/{total} · {stage}{cell_text}")
+        self.status_var.set(f"탐색 {self._progress_text()} · {stage}{cell_text}")
         self.draw_board()
         self.animation_job = self.after(self._animation_delay(), self._animate_trace)
 
@@ -841,7 +924,7 @@ class SudokuDemoApp(tk.Tk):
             if self.animation_job is not None:
                 self.after_cancel(self.animation_job)
                 self.animation_job = None
-            self.status_var.set(f"탐색 과정 일시정지 · {self.trace_index}/{len(self.trace_events)}")
+            self.status_var.set(f"탐색 과정 일시정지 · {self._progress_text()}")
         else:
             self._animate_trace()
 
@@ -860,7 +943,10 @@ class SudokuDemoApp(tk.Tk):
                 self.values[cell] = value
                 self.value_source[cell] = "solved"
         stats = result.stats.as_dict()
-        sampled = "" if self.trace_total == len(self.trace_events) else f" · {len(self.trace_events)}단계 표본 재생"
+        sampled = (
+            "" if self.trace_total == len(self.trace_events)
+            else f" · {self.trace_total}단계 중 {len(self.trace_events)}단계 표본 재생"
+        )
         self.stats_var.set(
             f"풀이 완료  ·  {stats['elapsed_ms']:.1f} ms{sampled}\n"
             f"탐색 노드 {stats['nodes']}  ·  분기 {stats['branch_nodes']}  ·  백트랙 {stats['backtracks']}"
@@ -901,7 +987,135 @@ class SudokuDemoApp(tk.Tk):
         else:
             self._show_error("검증 실패", "현재 입력으로 완성 가능한 해답이 없습니다.")
 
+    # ------------------------------------------------------------ 결과 저장 (독립 검사기 연동)
+
+    def result_payload(self) -> dict[str, Any]:
+        """현재 보드를 독립 검사기가 읽는 sudoku-result-v1 형식으로 만든다.
+
+        보드가 81칸 모두 채워져 있어야 한다. 그렇지 않으면 ValueError.
+        """
+        if len(self.values) != 81:
+            raise ValueError(f"보드에 빈칸이 {81 - len(self.values)}개 있습니다. 풀이를 끝낸 뒤 저장하세요.")
+        spec = self.current_spec
+        actual = "".join(str(self.values[(r, c)]) for r in range(9) for c in range(9))
+        sources = Counter(self.value_source.get(cell, "user") for cell in self.values)
+        payload: dict[str, Any] = {
+            "format": "sudoku-result-v1",
+            "source": "Sudoku AI Studio GUI",
+            "puzzle": str(spec.get("name") or spec.get("title") or "gui"),
+            "title": str(spec.get("title") or spec.get("name") or ""),
+            "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+            "givens": spec.get("givens", "." * 81),
+            "constraints": spec.get("constraints", []),
+        }
+        if "unsupported" in spec:
+            payload["unsupported"] = spec["unsupported"]
+        if spec.get("solution"):
+            payload["reference_source"] = "puzzle_json.solution"
+            payload["expected_solution"] = spec["solution"]
+        payload["actual_solution"] = actual
+        payload["filled_by"] = {
+            "given": sources.get("given", 0),
+            "user": sources.get("user", 0),
+            "solver": sources.get("solved", 0) + sources.get("trying", 0),
+        }
+        result = self.solve_result
+        if result is not None and result.solution is not None and all(
+            self.values.get(cell) == value for cell, value in result.solution.items()
+        ):
+            payload["solver"] = {
+                "algorithm": "backtracking",
+                "variable_order": result.config.var_order,
+                "value_order": result.config.val_order,
+                "propagation": result.config.propagation,
+            }
+            payload["stats"] = result.stats.as_dict()
+        return payload
+
+    def save_result_json(self) -> None:
+        if self.animating:
+            self.status_var.set("탐색 과정 재생이 끝난 뒤 저장하세요.")
+            return
+        try:
+            payload = self.result_payload()
+        except ValueError as exc:
+            self.status_var.set(f"저장할 수 없습니다 · {exc}")
+            messagebox.showwarning("결과 JSON 저장", str(exc))
+            return
+        name = re.sub(r"[^0-9A-Za-z가-힣_-]+", "_", payload["puzzle"]).strip("_") or "result"
+        path = filedialog.asksaveasfilename(
+            title="결과 JSON 저장", defaultextension=".json", filetypes=[("JSON", "*.json")],
+            initialdir=str(ROOT), initialfile=f"{name}_result.json",
+        )
+        if not path:
+            return
+        try:
+            Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except OSError as exc:
+            self._show_error("저장 실패", str(exc))
+            return
+        self.status_var.set(f"결과를 저장했습니다 · 독립 검사기에서 열어 확인하세요: {Path(path).name}")
+        messagebox.showinfo(
+            "결과 JSON 저장",
+            f"저장했습니다.\n{path}\n\n검사: python independent_checker/checker.py \"{path}\"",
+        )
+
+    # ------------------------------------------------------------ 힌트
+
+    def find_wrong_inputs(self) -> list[tuple[int, int]] | None:
+        """사용자가 넣은 숫자 중 정답과 다른 칸을 찾는다.
+
+        입력이 아직 완성 가능한 상태면 빈 목록, 틀린 칸이 있으면 그 칸 목록을 돌려준다.
+        입력으로는 완성할 수 없지만 어느 칸이 틀렸는지 정할 수 없으면(퍼즐 해가 없거나 여러 개)
+        None을 돌려준다.
+        """
+        user = {cell: v for cell, v in self.values.items() if cell not in self.original_values}
+        if not user:
+            return []
+        try:
+            current = load_spec(self._current_spec_with_values())
+            if solve(current, SolverConfig(time_limit=3.0)).solved:
+                return []
+        except SpecError:
+            pass  # 입력이 단서·규칙과 이미 충돌: 아래에서 어느 칸이 틀렸는지 찾는다.
+        base_model = load_spec(self.current_spec)
+        # 정답이 하나로 정해질 때만 '정답과 다른 칸'을 말할 수 있다(빈 보드 등은 불가).
+        if count_solutions(base_model, limit=2, config=SolverConfig(time_limit=5.0)) != 1:
+            return None
+        base = solve(base_model, SolverConfig(time_limit=5.0))
+        if base.solution is None:
+            return None
+        return sorted(cell for cell, value in user.items() if base.solution.get(cell) != value)
+
     def show_hint(self) -> None:
+        if self.animating:
+            self.status_var.set("탐색 과정 재생이 끝난 뒤 힌트를 받으세요.")
+            return
+        try:
+            wrong = self.find_wrong_inputs()
+        except Exception as exc:
+            self._show_error("힌트 오류", str(exc))
+            return
+        if wrong:
+            # 틀린 입력을 전제로 추론하면 '확정'이라며 틀린 힌트를 내게 된다. 먼저 고치게 한다.
+            self.error_cells = set(wrong)
+            self.hint_cells.clear()
+            self.draw_board()
+            names = ", ".join(f"r{r + 1}c{c + 1}" for r, c in wrong)
+            self.status_var.set(f"입력 오류 · 정답과 다른 칸: {names} (빨간 칸)")
+            messagebox.showwarning(
+                "AI 힌트",
+                f"직접 입력한 숫자 중 정답과 다른 칸이 있습니다: {names}\n\n"
+                "이 상태로는 올바른 힌트를 낼 수 없습니다. 빨간 칸을 지우거나 고친 뒤 다시 눌러 주세요.",
+            )
+            return
+        if wrong is None:
+            self._show_error(
+                "AI 힌트",
+                "현재 입력으로는 퍼즐을 완성할 수 없어 힌트를 낼 수 없습니다.\n"
+                "직접 넣은 숫자를 확인하거나 ‘처음 상태로 되돌리기’를 눌러 주세요.",
+            )
+            return
         try:
             base_model = load_spec(self.current_spec)
             current = {
@@ -917,6 +1131,7 @@ class SudokuDemoApp(tk.Tk):
             messagebox.showinfo("AI 힌트", "적용 가능한 논리 힌트를 찾지 못했습니다.\n입력을 검증해 보세요.")
             return
         self.hint_cells = set()
+        self.error_cells.clear()
         if step.cell is not None:
             self.hint_cells.add(step.cell)
             self.selected = step.cell
@@ -975,6 +1190,7 @@ class SudokuDemoApp(tk.Tk):
             self.values[self.selected] = value
             self.value_source[self.selected] = "user"
         self.hint_cells.clear()
+        self.error_cells.discard(self.selected)
         row, col = self.selected
         self.selected = (row, (col + 1) % 9)
         self.draw_board()
@@ -1004,6 +1220,8 @@ class SudokuDemoApp(tk.Tk):
                         fill = COLORS["selected"]
                 if (row, col) in self.hint_cells:
                     fill = "#FFF4D6"
+                if (row, col) in self.error_cells:
+                    fill = "#FEE2E2"
                 canvas.create_rectangle(x1, y1, x1 + self.CELL, y1 + self.CELL, fill=fill, outline="")
 
         self._draw_constraints()
@@ -1025,6 +1243,8 @@ class SudokuDemoApp(tk.Tk):
                 "trying": COLORS["trying"],
                 "solved": COLORS["solved"],
             }.get(source, COLORS["user"])
+            if cell in self.error_cells:
+                color = COLORS["danger"]
             weight = "bold" if source == "given" else "normal"
             canvas.create_text(x, y + 1, text=str(value), fill=color, font=("Segoe UI", 21, weight))
 
