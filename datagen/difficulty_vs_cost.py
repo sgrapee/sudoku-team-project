@@ -26,7 +26,7 @@ LEVELS = (1, 2, 3, 4, 5, 6)
 # run_bench.py 설정 순서 (plot_results.py와 같은 규칙)
 VAR_ORDER = ("static", "mrv", "mrv_degree")
 VAL_ORDER = ("asc", "lcv")
-PROPAGATION_ORDER = ("none", "fc", "ac3", "full")
+PROPAGATION_ORDER = ("none", "fc", "ac3_pure", "ac3", "full")
 BLUE, TEXT, MUTED, GRID, SURFACE = "#2a78d6", "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 
 

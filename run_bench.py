@@ -3,6 +3,7 @@
 Run from the repository root:
     python run_bench.py --experiment all --limit 20             # engine/puzzles_*.txt
     python run_bench.py --experiment E1 --puzzles puzzles/bench/classic.jsonl
+    python run_bench.py --experiment E2 --configs mrv_asc_ac3_pure --puzzles ...   # one setting only
 
 --puzzles accepts legacy .txt files (one 81-character classic puzzle per line)
 and puzzles/*.jsonl dataset files (format: puzzles/README.md). JSONL puzzles are
@@ -10,11 +11,11 @@ built with load_spec(), so variant constraints are included.
 
 The script records one row per puzzle/configuration pair.  E1 fixes propagation
 at FC so that variable/value ordering can be compared. E2 fixes MRV+ASC and
-compares the propagation levels currently implemented by the engine.
+compares the propagation levels implemented by the engine:
+none < fc < ac3_pure < ac3 < full.
 
-IMPORTANT: in the current source, propagation='ac3' calls hidden-single logic
-inside ac3(). Therefore E2's 'ac3' row is NOT pure AC-3. Do not describe it as
-pure AC-3 until the engine is changed and re-tested by the algorithm owner.
+NOTE: propagation='ac3' includes hidden singles (it always has). Pure AC-3 is
+the separate level 'ac3_pure'. Report 'ac3' as "AC-3 + hidden single".
 """
 from __future__ import annotations
 
@@ -121,7 +122,7 @@ def configurations(experiment: str) -> list[tuple[str, SolverConfig]]:
                 )))
     if experiment in ("E2", "all"):
         # Isolate propagation effects: same variable/value ordering.
-        for propagation in ("none", "fc", "ac3", "full"):
+        for propagation in ("none", "fc", "ac3_pure", "ac3", "full"):
             label = f"mrv_asc_{propagation}"
             configs.append((label, SolverConfig(
                 var_order="mrv", val_order="asc",
@@ -131,12 +132,18 @@ def configurations(experiment: str) -> list[tuple[str, SolverConfig]]:
 
 
 def run(experiment: str, limit: int | None, time_limit: float, output_dir: Path,
-        sources: list[Path] | None = None) -> Path:
+        sources: list[Path] | None = None, only: list[str] | None = None) -> Path:
     puzzles = load_sources(sources or LEGACY_SOURCES, limit)
     if not puzzles:
         raise RuntimeError("No puzzles loaded. Check the --puzzles paths")
 
     configs = configurations(experiment)
+    if only:
+        unknown = sorted(set(only) - {label for label, _ in configs})
+        if unknown:
+            raise ValueError(f"unknown --configs for {experiment}: {', '.join(unknown)} "
+                             f"(available: {', '.join(label for label, _ in configs)})")
+        configs = [(label, cfg) for label, cfg in configs if label in only]
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{experiment}_raw.csv"
     fields = [
@@ -191,8 +198,8 @@ def run(experiment: str, limit: int | None, time_limit: float, output_dir: Path,
 
     print(f"Saved raw results: {output_path}")
     print(f"Puzzles: {len(puzzles)} | Configurations: {len(configs)} | Runs: {total}")
-    if experiment in ("E2", "all"):
-        print("NOTE: current propagation='ac3' includes hidden-single checks; it is not pure AC-3.")
+    if any(cfg.propagation == "ac3" for _, cfg in configs):
+        print("NOTE: propagation='ac3' includes hidden singles; pure AC-3 is 'ac3_pure'.")
     return output_path
 
 
@@ -207,8 +214,13 @@ def main() -> None:
     parser.add_argument("--puzzles", type=Path, nargs="+", default=None,
                         help=".txt or .jsonl puzzle files (default: engine/puzzles_easy.txt, "
                              "engine/puzzles_hard.txt)")
+    parser.add_argument("--configs", nargs="+", default=None, metavar="LABEL",
+                        help="run only these configuration labels (e.g. mrv_asc_ac3_pure)")
     args = parser.parse_args()
-    run(args.experiment, args.limit, args.time_limit, args.output_dir, args.puzzles)
+    try:
+        run(args.experiment, args.limit, args.time_limit, args.output_dir, args.puzzles, args.configs)
+    except ValueError as exc:
+        parser.error(str(exc))
 
 
 if __name__ == "__main__":

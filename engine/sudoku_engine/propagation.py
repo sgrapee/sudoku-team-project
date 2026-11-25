@@ -1,12 +1,16 @@
 """제약 전파: 전방 검사(FC), AC-3, hidden single, naked pair.
 
-전파 강도를 4단계로 나눠 두었다. ④ 실험 담당이 이 축으로 노드 수 감소를
+전파 강도를 5단계로 나눠 두었다. ④ 실험 담당이 이 축으로 노드 수 감소를
 측정한다.
 
-    "none" : 전파 없음. 할당 시 제약 위반만 검사(순수 백트래킹)
-    "fc"   : 전방 검사. 방금 확정한 값을 이웃 도메인에서 1회 제거
-    "ac3"  : 이진 아크 일관성 + 전역 제약 전파를 고정점까지
-    "full" : ac3 + hidden single + naked pair 를 고정점까지
+    "none"     : 전파 없음. 할당 시 제약 위반만 검사(순수 백트래킹)
+    "fc"       : 전방 검사. 방금 확정한 값을 이웃 도메인에서 1회 제거
+    "ac3_pure" : 이진 아크 일관성 + 전역 제약 전파를 고정점까지 (hidden single 없음)
+    "ac3"      : ac3_pure + hidden single 을 고정점까지 (엔진 기본값)
+    "full"     : ac3 + naked pair/triple 을 고정점까지
+
+"ac3"는 처음부터 hidden single을 포함해 왔다. 기존 결과·기본값을 바꾸지 않으려고
+그대로 두고, 순수 AC-3는 "ac3_pure"로 따로 둔다.
 """
 
 from __future__ import annotations
@@ -17,7 +21,7 @@ from itertools import combinations
 from .core import Cell, Domains
 from .model import Model
 
-LEVELS = ("none", "fc", "ac3", "full")
+LEVELS = ("none", "fc", "ac3_pure", "ac3", "full")
 
 
 class PropagationStats:
@@ -63,11 +67,13 @@ def ac3(
     domains: Domains,
     stats: PropagationStats,
     queue: deque[Cell] | None = None,
+    hidden_singles: bool = True,
 ) -> bool:
     """이진 != 아크 일관성 + 전역 제약 전파를 고정점까지 반복.
 
     큐에는 '도메인이 변한 칸'을 넣는다. 그 칸의 이웃과, 그 칸이 속한
-    전역 제약을 다시 검사한다.
+    전역 제약을 다시 검사한다. hidden_singles=True(기본, "ac3"·"full")면
+    칸이 속한 유닛의 hidden single도 같이 찾는다. "ac3_pure"는 False로 부른다.
     """
     stats.calls += 1
     if queue is None:
@@ -109,10 +115,11 @@ def ac3(
                         queue.append(c)
                         in_queue.add(c)
 
-        # (3) 이 칸이 속한 유닛의 hidden single
-        for unit in model.units_of.get(cell, ()):
-            if not _hidden_singles_unit(domains, unit, model.grid.values, queue, in_queue, stats):
-                return False
+        # (3) 이 칸이 속한 유닛의 hidden single ("ac3_pure"는 건너뜀)
+        if hidden_singles:
+            for unit in model.units_of.get(cell, ()):
+                if not _hidden_singles_unit(domains, unit, model.grid.values, queue, in_queue, stats):
+                    return False
 
     return True
 
@@ -195,7 +202,7 @@ def propagate(
     queue: deque[Cell] | None = None
     if changed_cell is not None:
         queue = deque([changed_cell])
-    if not ac3(model, domains, stats, queue):
+    if not ac3(model, domains, stats, queue, hidden_singles=(level != "ac3_pure")):
         return False
     if level == "full":
         if not naked_subsets(model, domains, stats, max_k=3):

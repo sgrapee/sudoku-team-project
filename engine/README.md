@@ -86,7 +86,7 @@ class Constraint:
 |---|---|
 | 변수 순서 | static / MRV / MRV+Degree / random |
 | 값 순서 | ascending / LCV / random |
-| 전파 강도 | none / fc / ac3 / full (ac3 + naked subset) |
+| 전파 강도 | none / fc / ac3_pure (순수 AC-3) / ac3 (AC-3 + hidden single, 기본값) / full (ac3 + naked subset) |
 | 변형 제약 | Killer, Thermometer, Arrow, Sandwich, 대각선, 짝·홀, 부등호 |
 | 인간 기법 | naked·hidden single, naked pair·triple, hidden pair·triple, pointing, claiming, X-Wing, XY-Wing, Swordfish |
 | 계측 | nodes, branch_nodes, backtracks, assignments, arc_revisions, value_eliminations, elapsed |
