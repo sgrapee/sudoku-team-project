@@ -1,0 +1,34 @@
+{
+  "format": "sudoku-result-v1",
+  "source": "examples\\01_x_sudoku.json",
+  "puzzle": "01_x_sudoku",
+  "title": "X-스도쿠 (대각선)",
+  "created_at": "2026-11-24T20:44:05+09:00",
+  "givens": "7..4..5.95..6.32.1........7.....7.6..6........7.56.3...3.8..4.26........2.7......",
+  "constraints": [
+    {
+      "type": "diagonal"
+    }
+  ],
+  "reference_source": "puzzle_json.solution",
+  "expected_solution": "786421539594673281312985647823147965465239718179568324931856472648792153257314896",
+  "actual_solution": "786421539594673281312985647823147965465239718179568324931856472648792153257314896",
+  "solver": {
+    "algorithm": "backtracking",
+    "variable_order": "mrv_degree",
+    "value_order": "lcv",
+    "propagation": "ac3"
+  },
+  "stats": {
+    "nodes": 58,
+    "branch_nodes": 1,
+    "backtracks": 0,
+    "assignments": 57,
+    "elapsed_ms": 17.95,
+    "solutions_found": 1,
+    "timed_out": false,
+    "propagation_calls": 58,
+    "arc_revisions": 260,
+    "value_eliminations": 455
+  }
+}
