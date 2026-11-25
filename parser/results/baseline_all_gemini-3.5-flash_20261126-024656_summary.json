@@ -1,0 +1,64 @@
+{
+  "model": "factchat:gemini-3.5-flash",
+  "puzzles": "all",
+  "repeat": 1,
+  "runs": [
+    {
+      "run_index": 1,
+      "run_started_at": "2026-11-26T02:46:56+0900",
+      "summary": {
+        "llm_only": {
+          "n": 20,
+          "exact": 0.1,
+          "valid": 0.1,
+          "cell_acc": 1.0,
+          "givens_kept": 1.0,
+          "classic_violations": 0,
+          "variant_violations": 0,
+          "format_fail": 18,
+          "api_errors": 18,
+          "avg_calls": 1.0,
+          "avg_latency": 76.09385,
+          "input_tokens": 7197,
+          "output_tokens": 10936,
+          "wrong_ids": [
+            "01_x_sudoku",
+            "02_killer",
+            "03_thermo_parity",
+            "04_arrow_inequality",
+            "05_sandwich_mix",
+            "06_diagonal_easy",
+            "07_thermo_medium",
+            "08_arrow_expert",
+            "09_mixed_easy",
+            "10_killer_medium",
+            "classic_easy_01",
+            "classic_easy_02",
+            "classic_easy_03",
+            "classic_hard_01",
+            "classic_hard_02",
+            "classic_hard_03",
+            "classic_hard_04",
+            "classic_hard_05"
+          ]
+        },
+        "pipeline": {
+          "n": 20,
+          "exact": 1.0,
+          "valid": 1.0,
+          "cell_acc": 1.0,
+          "givens_kept": 1.0,
+          "classic_violations": 0,
+          "variant_violations": 0,
+          "format_fail": 0,
+          "api_errors": 0,
+          "avg_calls": 1.0,
+          "avg_latency": 4.1631,
+          "input_tokens": 36166,
+          "output_tokens": 1754,
+          "wrong_ids": []
+        }
+      }
+    }
+  ]
+}
