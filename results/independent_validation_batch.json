@@ -1,0 +1,2303 @@
+{
+  "created_at": "2026-11-26T01:52:15+09:00",
+  "time_limit_s": 10.0,
+  "engine_config": "mrv_degree/lcv/ac3",
+  "llm_specs": "parser/results/solver_specs_gemini-3.5-flash_20261112-160348.jsonl",
+  "summary": {
+    "eval50": {
+      "puzzles": 50,
+      "engine_solved": 50,
+      "checker_correct": 50,
+      "matches_gold": 50
+    },
+    "bench/classic": {
+      "puzzles": 100,
+      "engine_solved": 100,
+      "checker_correct": 100
+    },
+    "bench/multi": {
+      "puzzles": 12,
+      "engine_solved": 12,
+      "checker_correct": 12
+    },
+    "bench/unsat": {
+      "puzzles": 12,
+      "engine_no_solution": 12,
+      "unsat_confirmed": 12
+    },
+    "bench/variant": {
+      "puzzles": 150,
+      "engine_solved": 150,
+      "checker_correct": 150
+    }
+  },
+  "negative_controls": {
+    "per_solved_puzzle": 5,
+    "seed": 0,
+    "total": 1560,
+    "by_engine_ok_and_checker": {
+      "engine_ok=False, checker=violation": 787,
+      "engine_ok=True, checker=correct": 773
+    },
+    "disagreements": 0,
+    "disagreement_examples": []
+  },
+  "rows": [
+    {
+      "set": "eval50",
+      "id": "nl-001",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-002",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-003",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-004",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-005",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-006",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-007",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-008",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-009",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-010",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-011",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-012",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-013",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-014",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-015",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-016",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-017",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-018",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-019",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-020",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-021",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-022",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-023",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-024",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-025",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-026",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-027",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-028",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-029",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-030",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-031",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-032",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-033",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-034",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-035",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-036",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-037",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-038",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-039",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "nl-040",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "01_x_sudoku",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "02_killer",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "03_thermo_parity",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "04_arrow_inequality",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "05_sandwich_mix",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "06_diagonal_easy",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "07_thermo_medium",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "08_arrow_expert",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "09_mixed_easy",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "eval50",
+      "id": "10_killer_medium",
+      "engine": "solved",
+      "checker": "correct",
+      "matches_gold": true
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0006",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0007",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0010",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0016",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0018",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0022",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0024",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0032",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0033",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0034",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0038",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0039",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0040",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0041",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0043",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0044",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0047",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0049",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0050",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0056",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0063",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0067",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0068",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0071",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0075",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0000",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0004",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0008",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0014",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0017",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0023",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0026",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0035",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0037",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0052",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0054",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0064",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0066",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0079",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0083",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0085",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0087",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0088",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0092",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0096",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0097",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0102",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0110",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0114",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0132",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0005",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0011",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0013",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0020",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0029",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0046",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0059",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0060",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0062",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0091",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0122",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0126",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0142",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0165",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0191",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0197",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0232",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0243",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0257",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0268",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0319",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0329",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0334",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0337",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0356",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0001",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0002",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0003",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0009",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0012",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0015",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0019",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0021",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0025",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0027",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0028",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0030",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0031",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0036",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0042",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0045",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0048",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0051",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0053",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0055",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0057",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0058",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0061",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0065",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/classic",
+      "id": "classic-0069",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0016",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0018",
+      "expected_solutions": 2,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0022",
+      "expected_solutions": 3,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0014",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0017",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0023",
+      "expected_solutions": 11,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0020",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0029",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0046",
+      "expected_solutions": 12,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0009",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0012",
+      "expected_solutions": 19,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/multi",
+      "id": "multi-classic-0015",
+      "expected_solutions": 20,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0006",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0007",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0010",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0000",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0004",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0008",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0005",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0011",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0013",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0001",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0002",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/unsat",
+      "id": "unsat-classic-0003",
+      "expected_solutions": 0,
+      "engine": "no_solution"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0001",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0011",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0012",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0015",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0018",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0026",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0032",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0040",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0050",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0052",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0007",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0017",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0035",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0051",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0067",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0071",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0085",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0092",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0097",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0098",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0000",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0002",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0003",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0004",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0005",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0006",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0008",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0009",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0010",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "diagonal-0013",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0004",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0005",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0018",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0021",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0023",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0024",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0026",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0034",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0040",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0041",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0000",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0001",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0007",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0008",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0010",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0014",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0017",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0037",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0049",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0056",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0002",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0003",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0006",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0009",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0011",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0012",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0013",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0015",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0016",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "thermo-0019",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0003",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0046",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0058",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0061",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0062",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0076",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0084",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0088",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0093",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0101",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0004",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0008",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0014",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0039",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0045",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0048",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0064",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0070",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0071",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0073",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0000",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0001",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0002",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0005",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0006",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0007",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0009",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0010",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0011",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "arrow-0012",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0000",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0001",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0010",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0012",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0013",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0017",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0018",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0019",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0024",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0034",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0008",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0011",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0021",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0023",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0027",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0030",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0031",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0032",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0035",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0036",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0002",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0003",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0004",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0005",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0006",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0007",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0009",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0014",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0015",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "killer-0016",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0000",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0001",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0003",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0007",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0008",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0011",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0013",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0018",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0020",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0023",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0012",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0034",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0037",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0062",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0074",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0075",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0090",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0104",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0131",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0145",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0002",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0004",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0005",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0006",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0009",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0010",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0014",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0015",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0016",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    },
+    {
+      "set": "bench/variant",
+      "id": "mixed-0017",
+      "expected_solutions": null,
+      "engine": "solved",
+      "checker": "correct"
+    }
+  ]
+}
